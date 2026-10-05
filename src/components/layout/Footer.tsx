@@ -15,8 +15,11 @@ import {
   Headphones,
 } from 'lucide-react';
 import { mockCategories } from '../../data/mockCategories';
+import { useAdminData } from '../../context/AdminDataContext';
+import { ApnaMartLogo } from '../common/ApnaMartLogo';
 
 export const Footer: React.FC = () => {
+  const { settings } = useAdminData();
   return (
     <footer className="bg-slate-950 text-slate-300 pt-16 pb-24 lg:pb-12 border-t border-slate-900">
       {/* Top Value Propositions */}
@@ -66,13 +69,8 @@ export const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
         {/* Column 1: Brand Info */}
         <div className="lg:col-span-2 space-y-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center text-white font-extrabold text-lg shadow-lg">
-              A
-            </div>
-            <span className="text-2xl font-extrabold text-white">
-              Apna<span className="text-brand-500">Mart</span>
-            </span>
+          <Link to="/" className="inline-block">
+            <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="lg" inverted />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
             Pakistan's trusted destination for authentic electronics, modern fashion apparel, footwear, and lifestyle essentials. Built for unmatched convenience and speed.

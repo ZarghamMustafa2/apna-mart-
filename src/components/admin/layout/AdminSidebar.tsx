@@ -25,6 +25,7 @@ import {
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { useAdminNotifications } from '../../../context/NotificationContext';
 import { useAdminData } from '../../../context/AdminDataContext';
+import { ApnaMartLogo } from '../../common/ApnaMartLogo';
 import { PermissionKey } from '../../../types/admin';
 
 interface AdminSidebarProps {
@@ -45,7 +46,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
   const location = useLocation();
   const { adminUser, logoutAdmin, hasPermission } = useAdminAuth();
   const { unreadCount } = useAdminNotifications();
-  const { adminOrders, products } = useAdminData();
+  const { adminOrders, products, settings } = useAdminData();
 
   const pendingOrdersCount = adminOrders.filter((o) => o.status === 'New Order' || o.status === 'Confirmed' || o.status === 'Processing').length;
   const lowStockCount = products.filter((p) => p.stock <= 5).length;
@@ -86,15 +87,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose }) =
           {/* Sidebar Header */}
           <div className="p-5 border-b border-slate-900 flex items-center justify-between">
             <Link to="/admin" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-brand-500/20">
-                A
-              </div>
-              <div>
-                <span className="text-lg font-extrabold text-white tracking-tight">ApexControl</span>
-                <span className="block text-[10px] font-bold text-brand-400 uppercase tracking-widest -mt-1">
-                  Admin System
-                </span>
-              </div>
+              <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="md" inverted taglineText="Admin Console" />
             </Link>
 
             <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white lg:hidden">

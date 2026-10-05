@@ -19,4 +19,6 @@ export interface StoreSettings {
   maintenanceMode: boolean;
   metaTitle: string;
   metaDescription: string;
+  logoUrl?: string;
+  faviconUrl?: string;
 }

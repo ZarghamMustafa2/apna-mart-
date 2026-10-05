@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <defs>
+    <linearGradient id="apna-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="50%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+  </defs>
+  <!-- Background Container -->
+  <rect width="40" height="40" rx="10" fill="url(#apna-grad)" />
+
+  <!-- Shopping Bag Handle -->
+  <path d="M13 14C13 10.134 16.134 7 20 7C23.866 7 27 10.134 27 14" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" />
+
+  <!-- Bag Body -->
+  <rect x="7" y="13" width="26" height="22" rx="4.5" fill="#FFFFFF" fill-opacity="0.18" stroke="#FFFFFF" stroke-width="2.2" />
+
+  <!-- Stylized Letter 'A' -->
+  <path d="M20 16L13.5 30H18L20 25.5L22 30H26.5L20 16Z" fill="#FFFFFF" />
+  <path d="M17 23.5H23" stroke="#0284C7" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Vibrant Sparkle -->
+  <circle cx="28.5" cy="11.5" r="2.5" fill="#FACC15" />
+</svg>

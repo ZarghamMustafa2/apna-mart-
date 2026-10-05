@@ -17,7 +17,10 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import { useFilters } from '../../context/FilterContext';
+import { useAdminData } from '../../context/AdminDataContext';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { ApnaMartLogo } from '../common/ApnaMartLogo';
+import { UserAvatar } from '../common/UserAvatar';
 import { mockCategories } from '../../data/mockCategories';
 import { mockProducts } from '../../data/mockProducts';
 
@@ -34,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const { cartCount, summary, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const { user, isLoggedIn, logout } = useAuth();
+  const { settings } = useAdminData();
   const { setSearchQuery } = useFilters();
   const navigate = useNavigate();
 
@@ -84,17 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 group">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center text-white font-extrabold text-base sm:text-xl shadow-md group-hover:scale-105 transition-transform">
-            A
-          </div>
-          <div>
-            <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-cyan-400 transition-colors">
-              Apna<span className="text-brand-600 dark:text-cyan-400">Mart</span>
-            </span>
-            <span className="hidden sm:block text-[10px] font-semibold text-gray-400 dark:text-slate-400 tracking-wider uppercase -mt-1">
-              Premium E-Commerce
-            </span>
-          </div>
+          <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="md" />
         </Link>
 
         {/* Main Desktop Navigation */}
@@ -269,12 +263,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 transition-all border border-gray-200"
               >
-                <img
-                  src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                  alt={user?.name}
-                  className="w-7 h-7 rounded-full object-cover"
-                />
-                <span className="hidden md:inline text-xs font-semibold text-gray-800 max-w-[100px] truncate">
+                <UserAvatar name={user?.name} avatarUrl={user?.avatar} size="sm" />
+                <span className="hidden md:inline text-xs font-semibold text-gray-800 dark:text-slate-200 max-w-[100px] truncate">
                   {user?.name.split(' ')[0]}
                 </span>
               </button>

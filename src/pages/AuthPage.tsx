@@ -16,9 +16,12 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { SEOHead } from '../components/common/SEOHead';
+import { ApnaMartLogo } from '../components/common/ApnaMartLogo';
+import { useAdminData } from '../context/AdminDataContext';
 
 export const AuthPage: React.FC = () => {
   const { login, register, isLoggedIn } = useAuth();
+  const { settings } = useAdminData();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -125,13 +128,8 @@ export const AuthPage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xl p-6 sm:p-8 space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-2 group mb-1">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-brand-400 text-white flex items-center justify-center font-extrabold text-2xl shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
-              A
-            </div>
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Apna<span className="text-brand-600 dark:text-cyan-400">Mart</span>
-            </span>
+          <Link to="/" className="inline-block group mb-1">
+            <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="lg" />
           </Link>
 
           <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">

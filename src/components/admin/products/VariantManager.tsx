@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProductVariant } from '../../../types/product';
-import { Plus, Trash2, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle, Image as ImageIcon, X } from 'lucide-react';
+import { uploadImage } from '../../../services/mediaService';
 
 interface VariantManagerProps {
   variants: ProductVariant[];
@@ -83,6 +84,7 @@ export const VariantManager: React.FC<VariantManagerProps> = ({ variants, onChan
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-gray-400 font-extrabold uppercase border-b border-gray-100">
+                <th className="pb-3 px-2">Image</th>
                 <th className="pb-3 px-2">Variant Combination</th>
                 <th className="pb-3 px-2">SKU</th>
                 <th className="pb-3 px-2">Regular Price</th>
@@ -94,6 +96,44 @@ export const VariantManager: React.FC<VariantManagerProps> = ({ variants, onChan
             <tbody className="divide-y divide-gray-100 font-semibold text-gray-800">
               {variants.map((v, i) => (
                 <tr key={v.id}>
+                  <td className="py-2.5 px-2">
+                    {v.image ? (
+                      <div className="relative group w-9 h-9 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                        <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateVariant(i, 'image', undefined)}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                          title="Remove image"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        className="w-9 h-9 rounded-lg border border-dashed border-gray-300 hover:border-brand-500 bg-gray-50 hover:bg-brand-50/40 flex items-center justify-center cursor-pointer text-gray-400 hover:text-brand-600 transition-colors flex-shrink-0"
+                        title="Direct upload variant image"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const url = await uploadImage(file);
+                                handleUpdateVariant(i, 'image', url);
+                              } catch (err: any) {
+                                alert(err?.message || 'Failed to upload image');
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </td>
                   <td className="py-2.5 px-2 font-bold text-gray-900">{v.name}</td>
                   <td className="py-2.5 px-2">
                     <input

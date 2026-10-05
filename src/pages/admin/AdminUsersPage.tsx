@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { mockAdminUsers, useAdminAuth } from '../../context/AdminAuthContext';
 import { AdminUser, AdminRoleType } from '../../types/admin';
+import { ImageUploader } from '../../components/common/ImageUploader';
 import { UserCheck, Shield, Plus, Lock, AlertCircle, Edit3, Trash2 } from 'lucide-react';
 
 export const AdminUsersPage: React.FC = () => {
@@ -11,6 +12,7 @@ export const AdminUsersPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AdminRoleType>('Staff');
+  const [avatar, setAvatar] = useState('');
 
   const canManageUsers = hasPermission('manage_admin_users');
 
@@ -22,6 +24,7 @@ export const AdminUsersPage: React.FC = () => {
         name,
         email,
         role,
+        avatar: avatar || undefined,
         isOwner: false,
         status: 'Active',
         createdAt: new Date().toISOString().split('T')[0],
@@ -30,6 +33,7 @@ export const AdminUsersPage: React.FC = () => {
       setShowAddModal(false);
       setName('');
       setEmail('');
+      setAvatar('');
     }
   };
 
@@ -138,6 +142,14 @@ export const AdminUsersPage: React.FC = () => {
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 space-y-4">
             <h3 className="text-lg font-extrabold text-gray-900 border-b border-gray-100 pb-3">Add Admin Staff Account</h3>
             <form onSubmit={handleAddUser} className="space-y-4">
+              <ImageUploader
+                value={avatar}
+                onChange={setAvatar}
+                label="Staff Profile Picture"
+                aspectRatio="square"
+                placeholderText="Upload photo (JPG, PNG, WebP)"
+              />
+
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Staff Name *</label>
                 <input
@@ -155,7 +167,7 @@ export const AdminUsersPage: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="ali.staff@apexstore.pk"
+                  placeholder="ali.staff@apnamart.space"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"

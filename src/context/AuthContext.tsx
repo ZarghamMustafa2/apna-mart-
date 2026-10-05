@@ -21,8 +21,9 @@ interface AuthContextType {
     pass: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<CustomerUser>) => Promise<void>;
+  updateProfile: (data: Partial<CustomerUser>) => Promise<boolean>;
   addAddress: (address: ShippingAddress & { label?: string }) => Promise<void>;
+  editAddress: (addressId: string, updated: Partial<ShippingAddress & { label?: string }>) => Promise<void>;
   deleteAddress: (addressId: string) => Promise<void>;
   setDefaultAddress: (addressId: string) => Promise<void>;
   changePassword: (currentPass: string, newPass: string) => Promise<boolean>;
@@ -131,13 +132,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfile = async (data: Partial<CustomerUser>) => {
-    if (!user) return;
-    const updated = await updateCustomerProfile(user.id, data);
-    if (updated) {
-      setUser(updated);
-    } else {
-      setUser((prev) => (prev ? { ...prev, ...data } : null));
+  const updateProfile = async (data: Partial<CustomerUser>): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const updated = await updateCustomerProfile(user.id, data);
+      if (updated) {
+        setUser(updated);
+      } else {
+        setUser((prev) => (prev ? { ...prev, ...data } : null));
+      }
+      return true;
+    } catch (e) {
+      console.error('Update profile error:', e);
+      return false;
     }
   };
 
@@ -158,6 +165,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await updateCustomerProfile(user.id, {
       savedAddresses: updatedAddresses,
       defaultAddress: newDefault,
+    });
+  };
+
+  const editAddress = async (addressId: string, updated: Partial<ShippingAddress & { label?: string }>) => {
+    if (!user) return;
+    const updatedAddresses = user.savedAddresses.map((addr) =>
+      addr.id === addressId ? { ...addr, ...updated } : addr
+    );
+    let updatedDefault = user.defaultAddress;
+    if (user.defaultAddress && (user.defaultAddress as any).id === addressId) {
+      updatedDefault = { ...user.defaultAddress, ...updated } as ShippingAddress;
+    }
+    const updatedUser: CustomerUser = {
+      ...user,
+      savedAddresses: updatedAddresses,
+      defaultAddress: updatedDefault,
+    };
+    setUser(updatedUser);
+    await updateCustomerProfile(user.id, {
+      savedAddresses: updatedAddresses,
+      defaultAddress: updatedDefault,
     });
   };
 
@@ -211,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateProfile,
         addAddress,
+        editAddress,
         deleteAddress,
         setDefaultAddress,
         changePassword,

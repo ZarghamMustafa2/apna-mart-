@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { Category, Subcategory } from '../../types/product';
 import { ConfirmModal } from '../../components/admin/common/ConfirmModal';
+import { ImageUploader } from '../../components/common/ImageUploader';
 import { Plus, Edit3, Trash2, FolderTree, ChevronRight } from 'lucide-react';
 
 export const AdminCategoriesPage: React.FC = () => {
@@ -164,16 +165,13 @@ export const AdminCategoriesPage: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Image URL</label>
-                <input
-                  type="url"
-                  required
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
-                />
-              </div>
+              <ImageUploader
+                value={image}
+                onChange={setImage}
+                label="Category Cover Image"
+                aspectRatio="video"
+                placeholderText="Upload category thumbnail or banner"
+              />
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Description</label>

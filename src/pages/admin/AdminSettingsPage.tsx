@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { StoreSettings } from '../../types/settings';
-import { Settings, Save, Check, Shield, Globe, CreditCard, Truck, AlertTriangle } from 'lucide-react';
+import { ImageUploader } from '../../components/common/ImageUploader';
+import { ApnaMartLogo } from '../../components/common/ApnaMartLogo';
+import { Settings, Save, Check, Shield, Globe, CreditCard, Truck, Palette, Sparkles } from 'lucide-react';
 
 export const AdminSettingsPage: React.FC = () => {
   const { settings, updateSettings } = useAdminData();
@@ -27,6 +29,7 @@ export const AdminSettingsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
             Store Settings & General Configuration
           </h1>
+          <p className="text-xs text-gray-500 font-medium">Manage branding, business info, payment methods, and shipping rules</p>
         </div>
 
         <button
@@ -41,11 +44,83 @@ export const AdminSettingsPage: React.FC = () => {
       {savedSuccess && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-600" />
-          <span>Store configuration updated successfully!</span>
+          <span>Store configuration updated successfully! Changes reflect immediately across ApnaMart.</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* Brand & Visual Identity */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-5 lg:col-span-2">
+          <div className="border-b border-gray-100 pb-3 flex items-center justify-between">
+            <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-brand-600" />
+              Store Branding & Visual Identity
+            </h3>
+            <span className="text-xs text-brand-600 font-bold bg-brand-50 px-3 py-1 rounded-full">
+              Official: ApnaMart (apnamart.space)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {/* Custom Logo Upload */}
+            <div className="space-y-3">
+              <ImageUploader
+                value={formData.logoUrl}
+                onChange={(url) => handleChange('logoUrl', url)}
+                label="Store Header & Brand Logo"
+                aspectRatio="banner"
+                placeholderText="Upload custom store logo (PNG, SVG, WebP with transparency)"
+              />
+              <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-bold text-gray-800 block">Default Brand Logo Preview:</span>
+                  <span className="text-[11px] text-gray-500">When no custom logo is uploaded, ApnaMart's vector brand mark is displayed:</span>
+                </div>
+                <div className="bg-white p-2 rounded-xl shadow-xs border border-gray-100 flex-shrink-0">
+                  <ApnaMartLogo size="sm" />
+                </div>
+              </div>
+            </div>
+
+            {/* Favicon & Store Meta */}
+            <div className="space-y-4">
+              <ImageUploader
+                value={formData.faviconUrl}
+                onChange={(url) => handleChange('faviconUrl', url)}
+                label="Store Favicon (Browser Tab Icon)"
+                aspectRatio="square"
+                placeholderText="Upload 32x32 or 64x64 icon (SVG, PNG)"
+              />
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Brand Store Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.storeName}
+                  onChange={(e) => handleChange('storeName', e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                  Brand Slogan / Meta Description
+                </label>
+                <input
+                  type="text"
+                  value={formData.metaDescription}
+                  onChange={(e) => handleChange('metaDescription', e.target.value)}
+                  placeholder="Pakistan's Trusted Online Shopping Destination"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Store Profile & Contact Info */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
           <h3 className="text-base font-extrabold text-gray-900 border-b border-gray-100 pb-3 flex items-center gap-2">
@@ -54,17 +129,6 @@ export const AdminSettingsPage: React.FC = () => {
           </h3>
 
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Store Name</label>
-              <input
-                type="text"
-                required
-                value={formData.storeName}
-                onChange={(e) => handleChange('storeName', e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
-              />
-            </div>
-
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Contact Email</label>
               <input

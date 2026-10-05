@@ -17,6 +17,9 @@ import {
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
+import { useAdminData } from '../../context/AdminDataContext';
+import { ApnaMartLogo } from '../common/ApnaMartLogo';
+import { UserAvatar } from '../common/UserAvatar';
 import { mockCategories } from '../../data/mockCategories';
 import { useFilters } from '../../context/FilterContext';
 
@@ -31,6 +34,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   const { cartCount, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const { user, isLoggedIn } = useAuth();
+  const { settings } = useAdminData();
   const { setSearchQuery } = useFilters();
   const navigate = useNavigate();
 
@@ -59,16 +63,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
           />
 
           {/* Drawer Panel */}
-          <div className="relative w-4/5 max-w-sm h-full bg-white shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-300">
+          <div className="relative w-4/5 max-w-sm h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-300">
             <div>
               {/* Drawer Header */}
               <div className="p-5 bg-gradient-to-r from-slate-900 to-brand-950 text-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center font-extrabold text-white text-lg">
-                    A
-                  </div>
-                  <span className="font-extrabold text-lg tracking-tight">ApnaMart</span>
-                </div>
+                <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="sm" inverted />
                 <button
                   onClick={onClose}
                   className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -185,15 +184,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                 <Link
                   to="/account"
                   onClick={onClose}
-                  className="flex items-center gap-3 p-2 bg-white rounded-xl shadow-sm border border-gray-200"
+                  className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700"
                 >
-                  <img
-                    src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                    alt={user?.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
+                  <UserAvatar name={user?.name} avatarUrl={user?.avatar} size="md" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-gray-900 truncate">{user?.name}</div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{user?.name}</div>
                     <div className="text-xs text-brand-600 font-semibold">View Account</div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400" />

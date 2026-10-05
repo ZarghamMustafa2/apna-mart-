@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useOrders } from '../../context/OrderContext';
 import { ShoppingBag, MapPin, Heart, Clock, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { UserAvatar } from '../common/UserAvatar';
 
 interface AccountDashboardProps {
   onNavigateTab: (tab: string) => void;
@@ -26,11 +27,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({ onNavigateTa
       {/* Welcome Banner */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 to-brand-950 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-4 text-center sm:text-left">
-          <img
-            src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-            alt={user?.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-brand-400 shadow-md"
-          />
+          <UserAvatar name={user?.name} avatarUrl={user?.avatar} size="xl" />
           <div>
             <span className="text-xs font-bold text-brand-300 uppercase tracking-wider">Customer Portal</span>
             <h2 className="text-2xl font-extrabold text-white">Welcome back, {user?.name}!</h2>

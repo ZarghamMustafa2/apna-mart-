@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAdminData } from '../../context/AdminDataContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { VariantManager } from '../../components/admin/products/VariantManager';
+import { MultiImageUploader } from '../../components/common/MultiImageUploader';
 import { Product, ProductVariant, ProductBadge } from '../../types/product';
 import { ArrowLeft, Save, Plus, Trash2, Image, Sparkles } from 'lucide-react';
 
@@ -33,24 +34,12 @@ export const AdminProductEditPage: React.FC = () => {
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80',
   ]);
-  const [imageUrlInput, setImageUrlInput] = useState('');
   const [hasVariants, setHasVariants] = useState(existing?.hasVariants || false);
   const [variants, setVariants] = useState<ProductVariant[]>(existing?.variants || []);
 
   const calculatedDiscount = salePrice && salePrice < regularPrice
     ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
     : 0;
-
-  const handleAddImage = () => {
-    if (imageUrlInput.trim()) {
-      setImages([...images, imageUrlInput.trim()]);
-      setImageUrlInput('');
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
 
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -298,47 +287,11 @@ export const AdminProductEditPage: React.FC = () => {
               Product Media Gallery
             </h3>
 
-            {/* Existing Images Grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-gray-200 group">
-                  <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                  {idx === 0 && (
-                    <span className="absolute bottom-1 left-1 px-2 py-0.5 bg-brand-600 text-white text-[9px] font-extrabold rounded">
-                      Main Image
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Add Image URL */}
-            <div className="space-y-2 pt-2">
-              <label className="block text-[11px] font-bold text-gray-700 uppercase">Add Image URL</label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={imageUrlInput}
-                  onChange={(e) => setImageUrlInput(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddImage}
-                  className="px-3 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
+            <MultiImageUploader
+              images={images}
+              onChange={setImages}
+              maxImages={10}
+            />
           </div>
 
           {/* Badges */}

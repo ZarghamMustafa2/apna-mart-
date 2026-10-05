@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
 import { AdminRoleType } from '../../types/admin';
+import { ApnaMartLogo } from '../../components/common/ApnaMartLogo';
 
 export const AdminLoginPage: React.FC = () => {
   const { loginAdmin, switchRoleForTesting } = useAdminAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@apexstore.pk');
+  const [email, setEmail] = useState('admin@apnamart.space');
   const [password, setPassword] = useState('adminpassword');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -33,12 +34,12 @@ export const AdminLoginPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-brand-400 text-white flex items-center justify-center font-extrabold text-2xl mx-auto shadow-xl shadow-brand-500/30">
-            A
+        <div className="text-center space-y-3 flex flex-col items-center">
+          <ApnaMartLogo size="lg" />
+          <div>
+            <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Admin & Staff Portal</h1>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">Secure sign in for ApnaMart management</p>
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">ApexControl Admin Portal</h1>
-          <p className="text-xs text-gray-500 font-medium">Secure sign in for store administrators & staff</p>
         </div>
 
         {errorMsg && (
