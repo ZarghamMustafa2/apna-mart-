@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /category/
+Allow: /product/
+Allow: /about
+Allow: /contact
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms-conditions
+Allow: /return-policy
+Allow: /shipping-policy
+
+Disallow: /admin/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /account
+Disallow: /track-order
+
+Sitemap: https://apexstore.pk/sitemap.xml
