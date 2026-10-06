@@ -4,29 +4,48 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ApnaMart - Modern E-Commerce Platform</title>
+    <title>ApnaMart - Pakistan's Smart Superstore</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        z-index: 9999;
+      }
+      .loader-spinner {
+        width: 44px;
+        height: 44px;
+        border: 3.5px solid #e2e8f0;
+        border-top-color: #059669;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      .loader-text {
+        margin-top: 14px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #059669;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body class="bg-gray-50 text-gray-900 antialiased selection:bg-brand-500 selection:text-white">
     <div id="root">
-      <!-- Fallback message shown ONLY if index.html is opened directly via file:// instead of running dev server -->
-      <div style="font-family: Inter, system-ui, sans-serif; max-w: 600px; margin: 80px auto; padding: 32px; background: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); text-align: center; color: #0f172a;">
-        <div style="width: 56px; height: 56px; background: #eff6ff; color: #2563eb; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin: 0 auto 16px auto;">A</div>
-        <h2 style="font-size: 22px; font-weight: 800; margin: 0 0 8px 0; color: #0f172a;">ApnaMart E-Commerce Platform</h2>
-        <p style="font-size: 14px; color: #64748b; margin: 0 0 24px 0; line-height: 1.6;">
-          This modern React application requires a local server to run JavaScript modules smoothly.
-        </p>
-        <div style="background: #f8fafc; padding: 16px; border-radius: 16px; text-align: left; font-size: 13px; color: #334155; margin-bottom: 24px; border: 1px solid #cbd5e1;">
-          <strong style="color: #0f172a; display: block; margin-bottom: 8px;">How to Launch:</strong>
-          1. Double-click <strong>START_STORE.bat</strong> in your project folder.<br/>
-          2. Or run <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">npm run dev</code> in terminal.<br/>
-          3. Open <strong>http://localhost:5173</strong> in your browser.
-        </div>
-        <div style="font-size: 12px; color: #94a3b8; font-weight: 600;">
-          Server loading... If dev server is running, the app will mount automatically.
-        </div>
+      <div id="initial-loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Loading ApnaMart...</div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

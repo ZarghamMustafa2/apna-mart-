@@ -17,4 +17,4 @@ Disallow: /checkout
 Disallow: /account
 Disallow: /track-order
 
-Sitemap: https://apexstore.pk/sitemap.xml
+Sitemap: https://apnamart.space/sitemap.xml
