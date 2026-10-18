@@ -4,6 +4,8 @@ import { Order } from '../../types/order';
 import { OrderStatusTracker } from '../tracking/OrderStatusTracker';
 import { Printer, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAdminData } from '../../context/AdminDataContext';
+import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../../services/apiServices';
 
 interface OrderDetailModalProps {
   isOpen: boolean;
@@ -16,6 +18,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onClose,
   order,
 }) => {
+  const { products } = useAdminData();
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Order Receipt - ${order.id}`} maxWidth="2xl">
       <div className="space-y-6">
@@ -39,6 +43,62 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <h4 className="font-extrabold text-gray-900">Delivery Address</h4>
           <p className="font-bold text-gray-800">{order.shippingAddress.fullName} ({order.shippingAddress.phone})</p>
           <p className="text-gray-600">{order.shippingAddress.address}, {order.shippingAddress.area}, {order.shippingAddress.city}</p>
+        </div>
+
+        {/* Ordered Items */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-700 dark:text-slate-300">
+              Ordered Items ({order.items?.length || 0})
+            </h4>
+            <span className="text-xs text-gray-400 font-medium">
+              {order.items?.reduce((sum, it) => sum + (it.quantity || 1), 0)} Total Units
+            </span>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-slate-800 border border-gray-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+            {order.items?.map((item) => {
+              const imgSrc = resolveOrderItemImage(item, products);
+              const lineTotal = (item.quantity || 1) * (item.unitPrice || 0);
+
+              return (
+                <div key={item.id} className="p-3.5 flex items-center gap-3.5">
+                  {/* Product Image (56px) */}
+                  <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-slate-800 overflow-hidden border border-gray-100 dark:border-slate-700 flex-shrink-0 shadow-2xs">
+                    <img
+                      src={imgSrc}
+                      alt={item.product?.name || 'Product'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                      }}
+                    />
+                  </div>
+
+                  {/* Product Info & Variant */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white truncate">
+                      {item.product?.name}
+                    </div>
+                    {item.selectedVariant && (
+                      <div className="mt-0.5">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-[10px] font-bold text-gray-600 dark:text-slate-400">
+                          Variant: {item.selectedVariant.name}
+                        </span>
+                      </div>
+                    )}
+                    <div className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5">
+                      Qty: <strong className="text-gray-900 dark:text-white">{item.quantity}</strong> × Rs. {item.unitPrice?.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Line Total */}
+                  <div className="text-right font-extrabold text-brand-600 dark:text-cyan-400 text-xs sm:text-sm flex-shrink-0">
+                    Rs. {lineTotal.toLocaleString()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Totals */}

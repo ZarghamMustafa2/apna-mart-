@@ -3,9 +3,10 @@ import { useAdminData } from '../../../context/AdminDataContext';
 import { StatusBadge } from '../common/StatusBadge';
 import { Eye, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../../../services/apiServices';
 
 export const RecentOrdersTable: React.FC = () => {
-  const { adminOrders } = useAdminData();
+  const { adminOrders, products } = useAdminData();
   const recent = adminOrders.slice(0, 5);
 
   return (
@@ -34,7 +35,21 @@ export const RecentOrdersTable: React.FC = () => {
           <tbody className="divide-y divide-gray-50 font-semibold text-gray-800">
             {recent.map((ord) => (
               <tr key={ord.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-3 px-2 font-bold text-brand-600">{ord.id}</td>
+                <td className="py-3 px-2 font-bold text-brand-600">
+                  <div className="flex items-center gap-2">
+                    {ord.items && ord.items.length > 0 && (
+                      <img
+                        src={resolveOrderItemImage(ord.items[0], products)}
+                        alt="Product"
+                        className="w-8 h-8 rounded-lg object-cover bg-gray-50 border border-gray-100 flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                        }}
+                      />
+                    )}
+                    <span>{ord.id}</span>
+                  </div>
+                </td>
                 <td className="py-3 px-2">{ord.customerName}</td>
                 <td className="py-3 px-2 text-gray-400 font-normal">{ord.createdAt}</td>
                 <td className="py-3 px-2 font-extrabold">Rs. {ord.total.toLocaleString()}</td>

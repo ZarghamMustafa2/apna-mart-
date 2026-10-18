@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
 import { CheckCircle2, Package, MapPin, Printer, ArrowRight, ShieldCheck } from 'lucide-react';
+import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../services/apiServices';
 
 export const OrderConfirmationPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -73,10 +74,17 @@ export const OrderConfirmationPage: React.FC = () => {
           <h4 className="font-extrabold text-gray-900 text-sm">Order Summary Items</h4>
           <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
             {order.items.map((item) => {
-              const image = item.selectedVariant?.image || item.product.images[0];
+              const image = resolveOrderItemImage(item);
               return (
                 <div key={item.id} className="p-3 bg-white flex items-center justify-between gap-3 text-xs">
-                  <img src={image} alt={item.product.name} className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
+                  <img
+                    src={image}
+                    alt={item.product?.name || 'Product'}
+                    className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                    }}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-gray-900 truncate">{item.product.name}</div>
                     <div className="text-gray-500 text-[11px]">

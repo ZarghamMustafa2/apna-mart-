@@ -3,6 +3,7 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { Modal } from '../../components/common/Modal';
 import { OrderStatus, Order } from '../../types/order';
+import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../../services/apiServices';
 import {
   Search,
   Eye,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const AdminOrdersPage: React.FC = () => {
-  const { adminOrders, updateOrderStatus } = useAdminData();
+  const { adminOrders, updateOrderStatus, products } = useAdminData();
   const { adminUser } = useAdminAuth();
 
   const [search, setSearch] = useState('');
@@ -133,6 +134,7 @@ export const AdminOrdersPage: React.FC = () => {
                 <tr className="bg-gray-50/80 text-gray-400 font-extrabold uppercase border-b border-gray-100">
                   <th className="py-4 px-4">Order Number</th>
                   <th className="py-4 px-4">Customer Name</th>
+                  <th className="py-4 px-4">Products Ordered</th>
                   <th className="py-4 px-4">Total Amount</th>
                   <th className="py-4 px-4">Order Status (Change Status)</th>
                   <th className="py-4 px-4 text-right">Action</th>
@@ -163,7 +165,56 @@ export const AdminOrdersPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* 3. Total Amount */}
+                      {/* 3. Products Ordered (Thumbnails) */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2.5">
+                          {/* Image Thumbnails Stack */}
+                          <div className="flex items-center -space-x-2 py-0.5">
+                            {ord.items && ord.items.length > 0 ? (
+                              ord.items.slice(0, 3).map((item, idx) => {
+                                const imgSrc = resolveOrderItemImage(item, products);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-xs bg-gray-50 flex-shrink-0"
+                                    title={`${item.product?.name || 'Item'} (Qty: ${item.quantity})`}
+                                  >
+                                    <img
+                                      src={imgSrc}
+                                      alt={item.product?.name || 'Item'}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 text-[10px]">
+                                No img
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info Column */}
+                          <div className="min-w-0">
+                            {ord.items && ord.items.length > 3 && (
+                              <span className="px-1.5 py-0.2 rounded-md bg-brand-50 text-brand-700 text-[10px] font-extrabold">
+                                +{ord.items.length - 3} more
+                              </span>
+                            )}
+                            <div className="text-[11px] font-bold text-gray-900 truncate max-w-[140px]">
+                              {ord.items?.[0]?.product?.name || `${ord.items?.length || 0} items`}
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              {ord.items?.reduce((sum, it) => sum + (it.quantity || 1), 0) || 0} unit(s)
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 4. Total Amount */}
                       <td className="py-4 px-4">
                         <div className="text-sm font-extrabold text-gray-900">
                           Rs. {ord.total.toLocaleString()}
@@ -253,28 +304,59 @@ export const AdminOrdersPage: React.FC = () => {
 
             {/* Ordered Items */}
             <div className="space-y-3">
-              <h4 className="font-extrabold text-sm text-gray-900 border-b border-gray-100 pb-2">
-                Ordered Items ({selectedOrder.items?.length || 0})
-              </h4>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h4 className="font-extrabold text-sm text-gray-900">
+                  Ordered Items ({selectedOrder.items?.length || 0})
+                </h4>
+                <span className="text-xs text-gray-400 font-medium">
+                  {selectedOrder.items?.reduce((sum, it) => sum + (it.quantity || 1), 0)} Total Units
+                </span>
+              </div>
               <div className="divide-y divide-gray-100">
-                {selectedOrder.items?.map((item) => (
-                  <div key={item.id} className="py-3 flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <span className="font-bold text-gray-900">{item.product?.name}</span>
-                      {item.selectedVariant && (
-                        <span className="text-[11px] text-gray-500 block">
-                          Variant: {item.selectedVariant.name}
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-500 block">
-                        Quantity: {item.quantity} x Rs. {item.unitPrice?.toLocaleString()}
-                      </span>
+                {selectedOrder.items?.map((item) => {
+                  const imgSrc = resolveOrderItemImage(item, products);
+                  const lineTotal = (item.quantity || 1) * (item.unitPrice || 0);
+
+                  return (
+                    <div key={item.id} className="py-3 flex items-center gap-3.5 sm:gap-4">
+                      {/* Product Image Thumbnail */}
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gray-50 overflow-hidden border border-gray-100 flex-shrink-0 shadow-2xs">
+                        <img
+                          src={imgSrc}
+                          alt={item.product?.name || 'Product'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_PLACEHOLDER;
+                          }}
+                        />
+                      </div>
+
+                      {/* Product Info & Variant */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-extrabold text-gray-900 text-xs sm:text-sm line-clamp-1">
+                          {item.product?.name || 'Product'}
+                        </div>
+                        {item.selectedVariant && (
+                          <div className="mt-0.5">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-gray-100 text-[10px] font-bold text-gray-600">
+                              Variant: {item.selectedVariant.name}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 font-medium mt-1">
+                          Qty: <strong className="text-gray-900 font-bold">{item.quantity}</strong> × Rs. {item.unitPrice?.toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Line Total */}
+                      <div className="text-right flex-shrink-0">
+                        <div className="font-extrabold text-brand-600 text-xs sm:text-sm">
+                          Rs. {lineTotal.toLocaleString()}
+                        </div>
+                      </div>
                     </div>
-                    <div className="font-extrabold text-gray-900 text-sm">
-                      Rs. {(item.quantity * item.unitPrice).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

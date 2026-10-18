@@ -7,6 +7,7 @@ export interface CartItem {
   selectedAttributes?: Record<string, string>;
   unitPrice: number;
   quantity: number;
+  image?: string;
 }
 
 export interface Coupon {
