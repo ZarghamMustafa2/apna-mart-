@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, ProductVariant } from '../types/product';
 import { CartItem, Coupon, CartSummaryData } from '../types/cart';
 import { validateCoupon as validateCouponService } from '../services/couponService';
+import { useAdminData } from './AdminDataContext';
 
 interface CartContextType {
   cart: CartItem[];
@@ -23,10 +24,11 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const CART_STORAGE_KEY = 'apex_ecommerce_cart';
 const COUPON_STORAGE_KEY = 'apex_ecommerce_coupon';
-const FREE_SHIPPING_THRESHOLD = 5000;
-const BASE_SHIPPING_FEE = 250;
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { settings } = useAdminData();
+  const freeShippingThreshold = Number(settings?.freeShippingThreshold ?? 5000);
+  const baseShippingFee = Number(settings?.defaultShippingFee ?? 250);
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
@@ -153,7 +155,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD || cart.length === 0 ? 0 : BASE_SHIPPING_FEE;
+  const shippingFee = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : baseShippingFee;
   const total = Math.max(0, subtotal - couponDiscount + shippingFee);
 
   const summary: CartSummaryData = {
@@ -162,7 +164,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     couponCode: appliedCoupon?.code,
     couponDiscount,
     shippingFee,
-    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+    freeShippingThreshold,
     total,
   };
 

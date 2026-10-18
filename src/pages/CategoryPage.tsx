@@ -27,7 +27,7 @@ export const CategoryPage: React.FC = () => {
   }, [categorySlug]);
 
   let categoryProducts = productList.filter(
-    (p) => p.categoryId === category.id || p.category.toLowerCase() === category.name.toLowerCase()
+    (p) => !p.isHidden && (p.categoryId === category.id || p.category.toLowerCase() === category.name.toLowerCase())
   );
 
   if (selectedSubcategory) {

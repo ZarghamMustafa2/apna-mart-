@@ -6,8 +6,9 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 
 export const NewArrivalsSection: React.FC = () => {
   const { products } = useAdminData();
-  const newArrivals = products ? products.filter((p) => p.badges.includes('New')) : [];
-  const displayList = newArrivals.length >= 4 ? newArrivals.slice(0, 4) : (products || []).slice(0, 4);
+  const visibleProducts = products ? products.filter((p) => !p.isHidden) : [];
+  const newArrivals = visibleProducts.filter((p) => p.badges?.includes('New'));
+  const displayList = newArrivals.length >= 4 ? newArrivals.slice(0, 4) : visibleProducts.slice(0, 4);
 
   if (displayList.length === 0) return null;
 

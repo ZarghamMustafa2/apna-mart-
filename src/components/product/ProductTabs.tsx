@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product, SpecificationGroup, SpecificationItem } from '../../types/product';
 import { Rating } from '../common/Rating';
 import { WriteReviewModal } from './WriteReviewModal';
 import { Plus, CheckCircle2 } from 'lucide-react';
+import { getProductReviews, CustomerReview } from '../../services/reviewService';
 
 interface ProductTabsProps {
   product: Product;
@@ -11,12 +12,40 @@ interface ProductTabsProps {
 export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewsList, setReviewsList] = useState<CustomerReview[]>([]);
+
+  const loadReviews = async () => {
+    try {
+      const list = await getProductReviews(product.name);
+      setReviewsList(list);
+    } catch (e) {
+      console.error('Error loading reviews:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadReviews();
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('apnamart_db_sync');
+      channel.onmessage = (event) => {
+        if (event?.data?.type === 'APNAMART_SYNC') {
+          loadReviews();
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    }
+  }, [product.name]);
+
+  const totalReviewsCount = reviewsList.length > 0 ? reviewsList.length : product.reviewCount;
 
   const ratingDistribution = [
-    { stars: 5, percentage: 78, count: Math.round(product.reviewCount * 0.78) },
-    { stars: 4, percentage: 16, count: Math.round(product.reviewCount * 0.16) },
-    { stars: 3, percentage: 4, count: Math.round(product.reviewCount * 0.04) },
-    { stars: 2, percentage: 2, count: Math.round(product.reviewCount * 0.02) },
+    { stars: 5, percentage: 78, count: Math.round(totalReviewsCount * 0.78) },
+    { stars: 4, percentage: 16, count: Math.round(totalReviewsCount * 0.16) },
+    { stars: 3, percentage: 4, count: Math.round(totalReviewsCount * 0.04) },
+    { stars: 2, percentage: 2, count: Math.round(totalReviewsCount * 0.02) },
     { stars: 1, percentage: 0, count: 0 },
   ];
 
@@ -27,7 +56,7 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
         {[
           { id: 'description', label: 'Description' },
           { id: 'specs', label: 'Specifications' },
-          { id: 'reviews', label: `Reviews (${product.reviewCount})` },
+          { id: 'reviews', label: `Reviews (${totalReviewsCount})` },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -129,39 +158,30 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
 
             {/* Verified Reviews List */}
             <div className="space-y-4">
-              {[
-                {
-                  name: 'Zayn Shah',
-                  rating: 5,
-                  date: 'Aug 22, 2026',
-                  comment: 'Amazing product! Delivered within 2 days to Karachi. Quality is 10/10 as described.',
-                  isVerifiedPurchase: true,
-                },
-                {
-                  name: 'Sana Tariq',
-                  rating: 4,
-                  date: 'Aug 19, 2026',
-                  comment: 'Very satisfied with the purchase. Packaging was very secure and original box included warranty.',
-                  isVerifiedPurchase: true,
-                },
-              ].map((rev, i) => (
-                <div key={i} className="p-5 rounded-2xl border border-gray-100 space-y-2 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-xs text-gray-900">{rev.name}</span>
-                      {rev.isVerifiedPurchase && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Verified Purchase
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-gray-400">{rev.date}</span>
-                  </div>
-                  <Rating rating={rev.rating} showCount={false} size="sm" />
-                  <p className="text-xs text-gray-600 leading-relaxed pt-1">{rev.comment}</p>
+              {reviewsList.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-2xl border border-gray-100">
+                  <p className="text-xs font-semibold">No verified customer reviews yet. Be the first to review this product!</p>
                 </div>
-              ))}
+              ) : (
+                reviewsList.map((rev) => (
+                  <div key={rev.id} className="p-5 rounded-2xl border border-gray-100 space-y-2 bg-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-gray-900">{rev.userName}</span>
+                        {rev.verifiedPurchase && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Verified Purchase
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-gray-400">{rev.date}</span>
+                    </div>
+                    <Rating rating={rev.rating} showCount={false} size="sm" />
+                    <p className="text-xs text-gray-600 leading-relaxed pt-1">{rev.comment}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -170,9 +190,11 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
       {/* Review Submission Modal */}
       {isReviewModalOpen && (
         <WriteReviewModal
+          productId={product.id}
           productName={product.name}
           isOpen={isReviewModalOpen}
           onClose={() => setIsReviewModalOpen(false)}
+          onReviewSubmitted={loadReviews}
         />
       )}
     </div>

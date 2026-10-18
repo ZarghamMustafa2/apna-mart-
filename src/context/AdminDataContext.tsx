@@ -17,7 +17,7 @@ import {
   dbGetById,
   getCategories,
   saveCategory,
-  deleteCategory,
+  deleteCategory as dbDeleteCategory,
   getInventoryLogs,
   adjustProductStock,
   getOrders,
@@ -94,6 +94,18 @@ const defaultSettings: StoreSettings = {
   metaDescription: 'Shop authentic smartphones, active noise cancellation headphones, footwear & fashion.',
 };
 
+const syncChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window
+  ? new BroadcastChannel('apnamart_db_sync')
+  : null;
+
+export const broadcastSync = (entity: string) => {
+  try {
+    syncChannel?.postMessage({ type: 'APNAMART_SYNC', entity, timestamp: Date.now() });
+  } catch (e) {
+    // broadcast channel fallback
+  }
+};
+
 const AdminDataContext = createContext<AdminDataContextType | undefined>(undefined);
 
 export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -108,7 +120,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
 
-  const refreshDatabaseData = async () => {
+  const refreshDatabaseData = async (shouldBroadcast: boolean = false) => {
     try {
       await openDatabase();
       const prods = await getAllProductsAdmin();
@@ -131,6 +143,10 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (secs) setHomepageSections(secs);
       if (setts) setSettings(setts);
       setIsDbLoaded(true);
+
+      if (shouldBroadcast) {
+        broadcastSync('admin_data');
+      }
     } catch (e) {
       console.warn('Database load warning (falling back to default state):', e);
       setIsDbLoaded(true);
@@ -139,6 +155,18 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   useEffect(() => {
     refreshDatabaseData();
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('apnamart_db_sync');
+      channel.onmessage = (event) => {
+        if (event?.data?.type === 'APNAMART_SYNC') {
+          refreshDatabaseData(false);
+        }
+      };
+      return () => {
+        channel.close();
+      };
+    }
   }, []);
 
   // Products
@@ -149,7 +177,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString().split('T')[0],
     };
     await saveProductAdmin(newProd);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
     return newProd;
   };
 
@@ -161,12 +189,12 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!existing) return;
     const updated = { ...existing, ...productData };
     await saveProductAdmin(updated);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const deleteProduct = async (id: string) => {
     await deleteProductAdmin(id);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const duplicateProduct = async (id: string) => {
@@ -180,13 +208,14 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString().split('T')[0],
     };
     await saveProductAdmin(duplicated);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const toggleProductStatus = async (id: string) => {
     const existing = products.find((p) => p.id === id);
     if (existing) {
-      await updateProduct(id, { inStock: !existing.inStock });
+      const newHiddenState = !existing.isHidden;
+      await updateProduct(id, { isHidden: newHiddenState });
     }
   };
 
@@ -194,20 +223,20 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const addCategory = async (cat: Omit<Category, 'id'>) => {
     const newCat: Category = { ...cat, id: `cat-${Date.now()}` };
     await saveCategory(newCat);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const updateCategory = async (id: string, cat: Partial<Category>) => {
     const existing = categories.find((c) => c.id === id);
     if (existing) {
       await saveCategory({ ...existing, ...cat });
-      await refreshDatabaseData();
+      await refreshDatabaseData(true);
     }
   };
 
   const deleteCategory = async (id: string) => {
-    await deleteCategory(id);
-    await refreshDatabaseData();
+    await dbDeleteCategory(id);
+    await refreshDatabaseData(true);
   };
 
   // Inventory Stock Adjustment
@@ -219,7 +248,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     adminName: string
   ) => {
     await adjustProductStock(productId, variantId, changeQty, reason, adminName);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   // Orders
@@ -230,42 +259,42 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     adminName: string = 'Admin'
   ) => {
     await updateDatabaseOrderStatus(orderId, newStatus, adminNote, adminName);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   // Coupons
   const addCoupon = async (coupon: Coupon) => {
     await saveCoupon(coupon);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const deleteCoupon = async (code: string) => {
     await deleteCouponByCode(code);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const updateHeroSlides = async (slides: HeroSlide[]) => {
     setHeroSlides(slides);
     await saveHeroSlides(slides);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const updatePromoBanners = async (banners: PromoBanner[]) => {
     setPromoBanners(banners);
     await savePromoBanners(banners);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const updateHomepageSections = async (newSections: HomepageSections) => {
     setHomepageSections(newSections);
     await saveHomepageSections(newSections);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   const updateSettings = async (newSettings: Partial<StoreSettings>) => {
     const updated = { ...settings, ...newSettings };
     await saveStoreSettings(updated);
-    await refreshDatabaseData();
+    await refreshDatabaseData(true);
   };
 
   return (

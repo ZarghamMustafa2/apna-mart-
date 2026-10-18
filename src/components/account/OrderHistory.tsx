@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../context/OrderContext';
 import { useAuth } from '../../context/AuthContext';
 import { Order } from '../../types/order';
@@ -9,10 +9,14 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../../services/apiServices';
 
 export const OrderHistory: React.FC = () => {
-  const { orders } = useOrders();
+  const { orders, refreshOrders } = useOrders();
   const { user } = useAuth();
   const { products } = useAdminData();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   // Filter orders associated strictly with this authenticated customer
   const customerOrders = orders.filter((o) => {

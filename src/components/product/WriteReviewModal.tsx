@@ -1,30 +1,55 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Star, CheckCircle2 } from 'lucide-react';
+import { submitReview } from '../../services/reviewService';
+import { broadcastSync } from '../../context/AdminDataContext';
 
 interface WriteReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   productName: string;
+  productId?: string;
+  onReviewSubmitted?: () => void;
 }
 
 export const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
   isOpen,
   onClose,
   productName,
+  productId,
+  onReviewSubmitted,
 }) => {
   const [rating, setRating] = useState(5);
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 2000);
+    if (!name.trim() || !comment.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await submitReview({
+        productId,
+        productName,
+        userName: name,
+        rating,
+        comment,
+      });
+      setSubmitted(true);
+      broadcastSync('reviews');
+      if (onReviewSubmitted) onReviewSubmitted();
+      setTimeout(() => {
+        setSubmitted(false);
+        onClose();
+      }, 2000);
+    } catch (err) {
+      console.error('Error submitting review:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -33,7 +58,7 @@ export const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
         <div className="py-8 text-center space-y-3">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
           <h4 className="text-lg font-bold text-gray-900">Thank You for Your Feedback!</h4>
-          <p className="text-xs text-gray-500">Your verified customer review has been submitted successfully.</p>
+          <p className="text-xs text-gray-500">Your verified customer review has been submitted and sent for moderation.</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,9 +104,10 @@ export const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors"
+            disabled={isSubmitting}
+            className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors disabled:opacity-60"
           >
-            Submit Review
+            {isSubmitting ? 'Submitting...' : 'Submit Review'}
           </button>
         </form>
       )}

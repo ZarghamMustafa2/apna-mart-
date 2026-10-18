@@ -206,7 +206,18 @@ export const AdminProductsPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <StatusBadge status={prod.inStock ? 'In Stock' : 'Out of Stock'} />
+                      <div className="flex flex-col gap-1 items-start">
+                        <StatusBadge status={prod.inStock ? 'In Stock' : 'Out of Stock'} />
+                        {prod.isHidden ? (
+                          <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <EyeOff className="w-3 h-3" /> Hidden
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Visible
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -226,10 +237,12 @@ export const AdminProductsPage: React.FC = () => {
                         </button>
                         <button
                           onClick={() => toggleProductStatus(prod.id)}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          title="Hide / Unhide Product"
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            prod.isHidden ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
+                          }`}
+                          title={prod.isHidden ? 'Product is Hidden — Click to make Visible' : 'Product is Visible — Click to Hide'}
                         >
-                          {prod.inStock ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4 text-red-500" />}
+                          {prod.isHidden ? <EyeOff className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
                         </button>
                         <button
                           onClick={() => setDeleteTargetId(prod.id)}

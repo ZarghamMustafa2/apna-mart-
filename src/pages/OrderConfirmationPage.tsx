@@ -1,18 +1,43 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
-import { CheckCircle2, Package, MapPin, Printer, ArrowRight, ShieldCheck } from 'lucide-react';
-import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER } from '../services/apiServices';
+import { CheckCircle2, Package, MapPin, Printer, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { resolveOrderItemImage, DEFAULT_PRODUCT_PLACEHOLDER, getOrderById as getDbOrderById } from '../services/apiServices';
+import { Order } from '../types/order';
 
 export const OrderConfirmationPage: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const { getOrderById } = useOrders();
 
-  const order = orderId ? getOrderById(orderId) : undefined;
+  const [order, setOrder] = useState<Order | undefined>(orderId ? getOrderById(orderId) : undefined);
+  const [isLoading, setIsLoading] = useState(!order);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+
+    if (orderId && !order) {
+      setIsLoading(true);
+      getDbOrderById(orderId)
+        .then((fetched) => {
+          setOrder(fetched);
+        })
+        .catch((err) => {
+          console.error('Error fetching order confirmation:', err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [orderId, order]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-4">
+        <Loader2 className="w-10 h-10 text-brand-600 animate-spin mx-auto" />
+        <h3 className="text-base font-bold text-gray-700">Loading order details...</h3>
+      </div>
+    );
+  }
 
   if (!order) {
     return (

@@ -1,24 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { StoreSettings } from '../../types/settings';
 import { ImageUploader } from '../../components/common/ImageUploader';
 import { ApnaMartLogo } from '../../components/common/ApnaMartLogo';
-import { Settings, Save, Check, Shield, Globe, CreditCard, Truck, Palette, Sparkles } from 'lucide-react';
+import { Settings, Save, Check, Shield, Globe, CreditCard, Truck, Palette, Sparkles, Loader2 } from 'lucide-react';
 
 export const AdminSettingsPage: React.FC = () => {
   const { settings, updateSettings } = useAdminData();
   const [formData, setFormData] = useState<StoreSettings>(settings);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
 
   const handleChange = (field: keyof StoreSettings, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    setIsSaving(true);
+    try {
+      await updateSettings(formData);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err) {
+      console.error('Settings update error:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -34,10 +48,11 @@ export const AdminSettingsPage: React.FC = () => {
 
         <button
           onClick={handleSubmit}
-          className="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
+          disabled={isSaving}
+          className="px-6 py-3 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
         >
-          <Save className="w-4 h-4" />
-          <span>Save Store Settings</span>
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          <span>{isSaving ? 'Saving...' : 'Save Store Settings'}</span>
         </button>
       </div>
 

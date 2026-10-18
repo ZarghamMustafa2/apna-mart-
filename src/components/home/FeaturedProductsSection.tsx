@@ -9,8 +9,9 @@ export const FeaturedProductsSection: React.FC = () => {
   const { products } = useAdminData();
   const { addToCart } = useCart();
 
-  const featured = products ? products.filter((p) => p.isFeatured || p.badges.includes('Featured') || p.badges.includes('Best Seller')) : [];
-  const displayList = featured.length >= 4 ? featured : (products || []).slice(0, 4);
+  const activeProducts = products ? products.filter((p) => !p.isHidden) : [];
+  const featured = activeProducts.filter((p) => p.isFeatured || p.badges.includes('Featured') || p.badges.includes('Best Seller'));
+  const displayList = featured.length >= 4 ? featured : activeProducts.slice(0, 4);
 
   if (displayList.length === 0) return null;
 

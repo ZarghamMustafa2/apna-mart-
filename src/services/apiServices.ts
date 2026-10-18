@@ -8,3 +8,4 @@ export * from './authService';
 export * from './couponService';
 export * from './cmsService';
 export * from './settingsService';
+export * from './reviewService';

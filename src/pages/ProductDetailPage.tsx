@@ -25,10 +25,10 @@ export const ProductDetailPage: React.FC = () => {
   const { products } = useAdminData();
 
   const productList = products && products.length > 0 ? products : mockProducts;
-  const product = productList.find((p) => p.slug === productSlug) || productList[0];
+  const product = productList.find((p) => p.slug === productSlug);
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(
-    product.variants && product.variants.length > 0 ? product.variants[0] : undefined
+    product?.variants && product.variants.length > 0 ? product.variants[0] : undefined
   );
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
@@ -36,12 +36,26 @@ export const ProductDetailPage: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (product.variants && product.variants.length > 0) {
+    if (product?.variants && product.variants.length > 0) {
       setSelectedVariant(product.variants[0]);
     } else {
       setSelectedVariant(undefined);
     }
   }, [productSlug, product]);
+
+  if (!product || product.isHidden) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-4">
+        <h2 className="text-2xl font-extrabold text-gray-900">Product Unavailable</h2>
+        <p className="text-xs text-gray-500">
+          This product is currently unavailable or has been removed from public listings.
+        </p>
+        <Link to="/shop" className="inline-block px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-colors">
+          Browse Available Products
+        </Link>
+      </div>
+    );
+  }
 
   const isWishlisted = isInWishlist(product.id);
   const effectiveRegularPrice = selectedVariant ? selectedVariant.regularPrice : product.regularPrice;

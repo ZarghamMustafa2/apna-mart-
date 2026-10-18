@@ -62,6 +62,7 @@ export interface Product {
   isFeatured?: boolean;
   isNewArrival?: boolean;
   isBestSeller?: boolean;
+  isHidden?: boolean;
   createdAt: string;
 }
 

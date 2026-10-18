@@ -6,8 +6,23 @@ import { UserCheck, Shield, Plus, Lock, AlertCircle, Edit3, Trash2 } from 'lucid
 
 export const AdminUsersPage: React.FC = () => {
   const { adminUser, hasPermission } = useAdminAuth();
-  const [users, setUsers] = useState<AdminUser[]>(mockAdminUsers);
+  const [users, setUsers] = useState<AdminUser[]>(() => {
+    try {
+      const saved = localStorage.getItem('apex_ecommerce_admin_users_list');
+      return saved ? JSON.parse(saved) : mockAdminUsers;
+    } catch (e) {
+      return mockAdminUsers;
+    }
+  });
   const [showAddModal, setShowAddModal] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('apex_ecommerce_admin_users_list', JSON.stringify(users));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [users]);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

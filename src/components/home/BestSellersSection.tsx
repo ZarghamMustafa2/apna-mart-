@@ -6,8 +6,9 @@ import { ArrowRight, Trophy } from 'lucide-react';
 
 export const BestSellersSection: React.FC = () => {
   const { products } = useAdminData();
-  const bestSellers = products ? products.filter((p) => p.badges.includes('Best Seller') || p.reviewCount > 10) : [];
-  const displayList = bestSellers.length >= 4 ? bestSellers.slice(0, 4) : (products || []).slice(0, 4);
+  const visibleProducts = products ? products.filter((p) => !p.isHidden) : [];
+  const bestSellers = visibleProducts.filter((p) => p.badges?.includes('Best Seller') || (p.reviewCount && p.reviewCount > 10));
+  const displayList = bestSellers.length >= 4 ? bestSellers.slice(0, 4) : visibleProducts.slice(0, 4);
 
   if (displayList.length === 0) return null;
 

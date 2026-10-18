@@ -14,12 +14,13 @@ import {
   RotateCcw,
   Headphones,
 } from 'lucide-react';
-import { mockCategories } from '../../data/mockCategories';
 import { useAdminData } from '../../context/AdminDataContext';
 import { ApnaMartLogo } from '../common/ApnaMartLogo';
 
 export const Footer: React.FC = () => {
-  const { settings } = useAdminData();
+  const { settings, categories } = useAdminData();
+  const displayCategories = categories && categories.length > 0 ? categories.slice(0, 6) : [];
+
   return (
     <footer className="bg-slate-950 text-slate-300 pt-16 pb-24 lg:pb-12 border-t border-slate-900">
       {/* Top Value Propositions */}
@@ -30,7 +31,9 @@ export const Footer: React.FC = () => {
           </div>
           <div>
             <h4 className="text-sm font-bold text-white">Free Nationwide Shipping</h4>
-            <p className="text-xs text-slate-400 mt-0.5">On all orders over Rs. 5,000</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              On all orders over {settings?.currencySymbol || 'Rs.'} {Number(settings?.freeShippingThreshold ?? 5000).toLocaleString()}
+            </p>
           </div>
         </div>
 
@@ -73,21 +76,21 @@ export const Footer: React.FC = () => {
             <ApnaMartLogo customLogoUrl={settings?.logoUrl} size="lg" inverted />
           </Link>
           <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-            Pakistan's trusted destination for authentic electronics, modern fashion apparel, footwear, and lifestyle essentials. Built for unmatched convenience and speed.
+            {settings?.storeDescription || "Pakistan's trusted destination for authentic electronics, modern fashion apparel, footwear, and lifestyle essentials. Built for unmatched convenience and speed."}
           </p>
 
           <div className="space-y-2 pt-2 text-xs text-slate-300">
             <div className="flex items-center gap-2.5">
               <MapPin className="w-4 h-4 text-brand-400 flex-shrink-0" />
-              <span>Main Boulevard, Gulberg III, Lahore, Pakistan</span>
+              <span>{settings?.address ? `${settings.address}, ${settings.city || ''}, ${settings.country || 'Pakistan'}` : 'Main Boulevard, Gulberg III, Lahore, Pakistan'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Phone className="w-4 h-4 text-brand-400 flex-shrink-0" />
-              <span>+92 300 1234567 | +92 42 35718899</span>
+              <span>{settings?.contactPhone || '+92 300 1234567'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Mail className="w-4 h-4 text-brand-400 flex-shrink-0" />
-              <span>support@apnamart.space</span>
+              <span>{settings?.contactEmail || 'support@apnamart.space'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Clock className="w-4 h-4 text-brand-400 flex-shrink-0" />
@@ -116,9 +119,9 @@ export const Footer: React.FC = () => {
             Categories
           </h3>
           <ul className="space-y-2.5 text-xs">
-            {mockCategories.map(cat => (
+            {displayCategories.map(cat => (
               <li key={cat.id}>
-                <Link to={`/shop?category=${cat.slug}`} className="hover:text-brand-400 transition-colors">
+                <Link to={`/category/${cat.slug}`} className="hover:text-brand-400 transition-colors">
                   {cat.name}
                 </Link>
               </li>

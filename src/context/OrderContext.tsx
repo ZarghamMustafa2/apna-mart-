@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Order, ShippingAddress, PaymentMethod, OrderStatus } from '../types/order';
 import { CartItem, Coupon } from '../types/cart';
 import { getOrders, createDatabaseOrder, trackOrderLive, getOrderById as getDbOrderById } from '../services/orderService';
-import { useAdminData } from './AdminDataContext';
+import { useAdminData, broadcastSync } from './AdminDataContext';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationContext';
 
 interface OrderContextType {
   orders: Order[];
@@ -25,6 +26,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [orders, setOrders] = useState<Order[]>([]);
   const { isDbLoaded } = useAdminData();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
   const refreshOrders = async () => {
     try {
@@ -38,6 +40,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isDbLoaded) {
       refreshOrders();
+    }
+
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('apnamart_db_sync');
+      channel.onmessage = (event) => {
+        if (event?.data?.type === 'APNAMART_SYNC') {
+          refreshOrders();
+        }
+      };
+      return () => {
+        channel.close();
+      };
     }
   }, [isDbLoaded]);
 
@@ -57,6 +71,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       user?.id
     );
     await refreshOrders();
+    broadcastSync('orders');
+    try {
+      addNotification(
+        'order',
+        'New Order Received',
+        `Order #${created.id} was placed by ${shippingAddress.fullName} for Rs. ${summary.total.toLocaleString()}.`,
+        '/admin/orders',
+        { orderId: created.id }
+      );
+    } catch (e) {
+      // ignore
+    }
     return created;
   };
 

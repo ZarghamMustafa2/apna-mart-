@@ -6,7 +6,7 @@ import { ArrowRight, Tag } from 'lucide-react';
 
 export const SaleDealsSection: React.FC = () => {
   const { products } = useAdminData();
-  const productList = products && products.length > 0 ? products : [];
+  const productList = products && products.length > 0 ? products.filter((p) => !p.isHidden) : [];
 
   // Filter products with active sale price (max 8)
   const saleProducts = productList

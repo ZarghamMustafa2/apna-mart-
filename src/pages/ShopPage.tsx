@@ -40,6 +40,11 @@ export const ShopPage: React.FC = () => {
 
   // Apply filters to product catalog
   let filtered = productList.filter((product) => {
+    // Exclude hidden products
+    if (product.isHidden) {
+      return false;
+    }
+
     // Special Section Filter from URL
     if (filterParam === 'featured' && !product.isFeatured && !product.badges?.includes('Featured')) {
       return false;

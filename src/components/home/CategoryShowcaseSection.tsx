@@ -7,7 +7,7 @@ import { ArrowRight, Layers } from 'lucide-react';
 export const CategoryShowcaseSection: React.FC = () => {
   const { categories, products } = useAdminData();
   const categoryList = categories && categories.length > 0 ? categories : [];
-  const productList = products && products.length > 0 ? products : [];
+  const productList = products && products.length > 0 ? products.filter((p) => !p.isHidden) : [];
 
   if (categoryList.length === 0 || productList.length === 0) return null;
 
