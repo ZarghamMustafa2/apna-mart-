@@ -14,6 +14,7 @@ import {
   getAllProductsAdmin,
   saveProductAdmin,
   deleteProductAdmin,
+  dbGetById,
   getCategories,
   saveCategory,
   deleteCategory,
@@ -144,7 +145,10 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const updateProduct = async (id: string, productData: Partial<Product>) => {
-    const existing = products.find((p) => p.id === id);
+    let existing = products.find((p) => p.id === id);
+    if (!existing) {
+      existing = await dbGetById<Product>('products', id);
+    }
     if (!existing) return;
     const updated = { ...existing, ...productData };
     await saveProductAdmin(updated);

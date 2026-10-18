@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ProductCard } from '../common/ProductCard';
 import { mockProducts } from '../../data/mockProducts';
 import { Product } from '../../types/product';
+import { useAdminData } from '../../context/AdminDataContext';
 import { Modal } from '../common/Modal';
 import { PriceDisplay } from '../common/PriceDisplay';
 import { Rating } from '../common/Rating';
@@ -15,8 +16,9 @@ export const ProductGridSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [selectedQuickView, setSelectedQuickView] = useState<Product | null>(null);
   const { addToCart } = useCart();
+  const { products } = useAdminData();
 
-  const productsList = mockProducts && mockProducts.length > 0 ? mockProducts : [];
+  const productsList = products && products.length > 0 ? products : (mockProducts || []);
 
   const filteredProducts = productsList.filter((p) => {
     if (activeTab === 'featured') return p.isFeatured;

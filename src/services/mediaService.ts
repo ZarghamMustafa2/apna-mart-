@@ -81,14 +81,20 @@ export function validateImageFile(
   }
 
   const allowedTypes = options?.allowedTypes || ALLOWED_MIME_TYPES;
-  const mime = file.type.toLowerCase();
+  const mime = file.type ? file.type.toLowerCase() : '';
+  const ext = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
+  const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+  const isExtensionAllowed = ext ? validExtensions.includes(ext) : false;
 
-  // Basic MIME check
-  const isTypeAllowed = allowedTypes.some((t) => mime === t || mime.includes(t.replace('image/', '')));
+  // MIME check with extension fallback
+  const isTypeAllowed =
+    (mime && allowedTypes.some((t) => mime === t || mime.includes(t.replace('image/', '')))) ||
+    isExtensionAllowed;
+
   if (!isTypeAllowed) {
     return {
       valid: false,
-      error: `Unsupported file format (${file.type || 'unknown'}). Please choose a JPG, PNG, or WebP image.`,
+      error: `Unsupported file format (${file.type || ext || 'unknown'}). Please choose a JPG, PNG, or WebP image.`,
     };
   }
 

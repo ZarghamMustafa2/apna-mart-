@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAdminData } from '../context/AdminDataContext';
 import { mockCategories } from '../data/mockCategories';
 import { mockProducts } from '../data/mockProducts';
 import { Breadcrumb } from '../components/common/Breadcrumb';
@@ -7,6 +8,10 @@ import { SEOHead } from '../components/common/SEOHead';
 import { ArrowRight, Layers, PackageCheck } from 'lucide-react';
 
 export const CategoriesPage: React.FC = () => {
+  const { categories, products } = useAdminData();
+  const categoryList = categories && categories.length > 0 ? categories : mockCategories;
+  const productList = products && products.length > 0 ? products : mockProducts;
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -42,7 +47,7 @@ export const CategoriesPage: React.FC = () => {
             <PackageCheck className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <div className="text-xl sm:text-2xl font-extrabold">{mockProducts.length}+</div>
+            <div className="text-xl sm:text-2xl font-extrabold">{productList.length}+</div>
             <div className="text-[10px] sm:text-xs text-slate-300 font-semibold uppercase tracking-wider">Available Products</div>
           </div>
         </div>
@@ -50,8 +55,8 @@ export const CategoriesPage: React.FC = () => {
 
       {/* 12 Category Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
-        {mockCategories.map((category) => {
-          const productCount = mockProducts.filter((p) => p.categoryId === category.id).length;
+        {categoryList.map((category) => {
+          const productCount = productList.filter((p) => p.categoryId === category.id || p.category.toLowerCase() === category.name.toLowerCase()).length;
 
           return (
             <div

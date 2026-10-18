@@ -166,7 +166,14 @@ export const AdminProductsPage: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img src={prod.images[0]} alt={prod.name} className="w-12 h-12 rounded-xl object-cover bg-gray-50 flex-shrink-0" />
+                        <img
+                          src={prod.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80'}
+                          alt={prod.name}
+                          className="w-12 h-12 rounded-xl object-cover bg-gray-50 flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80';
+                          }}
+                        />
                         <div>
                           <span className="text-[10px] font-bold uppercase text-brand-600">{prod.brand}</span>
                           <div className="font-extrabold text-gray-900 line-clamp-1">{prod.name}</div>

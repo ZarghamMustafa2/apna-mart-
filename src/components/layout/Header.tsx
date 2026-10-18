@@ -37,9 +37,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const { cartCount, summary, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const { user, isLoggedIn, logout } = useAuth();
-  const { settings } = useAdminData();
+  const { settings, products, categories } = useAdminData();
   const { setSearchQuery } = useFilters();
   const navigate = useNavigate();
+
+  const productList = products && products.length > 0 ? products : mockProducts;
+  const categoriesList = categories && categories.length > 0 ? categories : mockCategories;
 
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -65,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
 
   // Filtered live search suggestions
   const suggestions = searchInput.trim()
-    ? mockProducts.filter(
+    ? productList.filter(
         (p) =>
           p.name.toLowerCase().includes(searchInput.toLowerCase()) ||
           p.brand.toLowerCase().includes(searchInput.toLowerCase()) ||
@@ -124,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                   </Link>
                 </div>
                 <div className="space-y-1 max-h-96 overflow-y-auto scrollbar-thin">
-                  {mockCategories.map((cat) => (
+                  {categoriesList.map((cat) => (
                     <div key={cat.id} className="group/item">
                       <Link
                         to={`/category/${cat.slug}`}

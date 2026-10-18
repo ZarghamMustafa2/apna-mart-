@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAdminData } from '../../context/AdminDataContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -33,11 +33,7 @@ export const AdminProductEditPage: React.FC = () => {
   const [categoryId, setCategoryId] = useState(existing?.categoryId || categories[0]?.id || 'cat-electronics');
   const [stock, setStock] = useState<number>(existing?.stock ?? 10);
   const [desc, setDesc] = useState(existing?.description || '');
-  const [images, setImages] = useState<string[]>(
-    existing?.images && existing.images.length > 0
-      ? existing.images
-      : ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80']
-  );
+  const [images, setImages] = useState<string[]>(existing?.images || []);
 
   // 2. ADVANCED OPTIONS (Collapsed by default)
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -51,6 +47,27 @@ export const AdminProductEditPage: React.FC = () => {
   const [variants, setVariants] = useState<ProductVariant[]>(existing?.variants || []);
 
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync state when existing product finishes loading from IndexedDB
+  useEffect(() => {
+    if (existing) {
+      setName(existing.name || '');
+      setRegularPrice(existing.regularPrice || 0);
+      setSalePrice(existing.salePrice);
+      setCategoryId(existing.categoryId || categories[0]?.id || 'cat-electronics');
+      setStock(existing.stock ?? 10);
+      setDesc(existing.description || '');
+      setImages(existing.images && existing.images.length > 0 ? existing.images : []);
+      setBrand(existing.brand || 'ApnaMart');
+      setSku(existing.sku || '');
+      setShortDesc(existing.shortDescription || '');
+      setVideoUrl(existing.videoUrl || '');
+      setBadges(existing.badges || ['New']);
+      setHasVariants(existing.hasVariants || false);
+      setVariants(existing.variants || []);
+    }
+  }, [existing, categories]);
 
   // Discount calculation
   const calculatedDiscount =
@@ -58,7 +75,7 @@ export const AdminProductEditPage: React.FC = () => {
       ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
       : 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -77,8 +94,13 @@ export const AdminProductEditPage: React.FC = () => {
 
     const selectedCategory = categories.find((c) => c.id === categoryId) || categories[0];
 
+    const finalImages =
+      images.length > 0
+        ? images
+        : ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80'];
+
     const payload = {
-      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      slug: existing?.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name: name.trim(),
       brand: brand.trim() || 'ApnaMart',
       sku: sku.trim() || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -93,7 +115,7 @@ export const AdminProductEditPage: React.FC = () => {
       rating: existing?.rating || 5.0,
       reviewCount: existing?.reviewCount || 1,
       badges,
-      images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80'],
+      images: finalImages,
       videoUrl: videoUrl || undefined,
       hasVariants,
       variants: hasVariants ? variants : undefined,
@@ -105,13 +127,19 @@ export const AdminProductEditPage: React.FC = () => {
       ],
     };
 
-    if (isEditing && id) {
-      updateProduct(id, payload);
-    } else {
-      addProduct(payload as any);
+    try {
+      setIsSaving(true);
+      if (isEditing && id) {
+        await updateProduct(id, payload);
+      } else {
+        await addProduct(payload as any);
+      }
+      navigate('/admin/products');
+    } catch (err: any) {
+      setFormError(err.message || 'Failed to save product. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-
-    navigate('/admin/products');
   };
 
   return (
@@ -139,10 +167,11 @@ export const AdminProductEditPage: React.FC = () => {
         <button
           type="button"
           onClick={handleSubmit}
-          className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
+          disabled={isSaving}
+          className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
         >
           <Save className="w-4 h-4" />
-          <span>Save Product</span>
+          <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
         </button>
       </div>
 
@@ -466,10 +495,11 @@ export const AdminProductEditPage: React.FC = () => {
 
           <button
             type="submit"
-            className="px-10 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl flex items-center gap-2 transition-all hover:scale-105"
+            disabled={isSaving}
+            className="px-10 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl flex items-center gap-2 transition-all hover:scale-105"
           >
             <Save className="w-5 h-5" />
-            <span>Save Product Now</span>
+            <span>{isSaving ? 'Saving Product...' : 'Save Product Now'}</span>
           </button>
         </div>
       </form>
