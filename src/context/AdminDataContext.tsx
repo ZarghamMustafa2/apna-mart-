@@ -29,6 +29,10 @@ import {
   saveHeroSlides,
   getPromoBanners,
   savePromoBanners,
+  getHomepageSections,
+  saveHomepageSections,
+  HomepageSections,
+  defaultHomepageSections,
   getStoreSettings,
   saveStoreSettings,
 } from '../services/apiServices';
@@ -60,6 +64,8 @@ interface AdminDataContextType {
   updateHeroSlides: (slides: HeroSlide[]) => Promise<void>;
   promoBanners: PromoBanner[];
   updatePromoBanners: (banners: PromoBanner[]) => Promise<void>;
+  homepageSections: HomepageSections;
+  updateHomepageSections: (sections: HomepageSections) => Promise<void>;
 
   settings: StoreSettings;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
@@ -98,6 +104,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [coupons, setCoupons] = useState<Coupon[]>(mockCoupons);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(mockHeroSlides);
   const [promoBanners, setPromoBanners] = useState<PromoBanner[]>(mockPromoBanners);
+  const [homepageSections, setHomepageSections] = useState<HomepageSections>(defaultHomepageSections);
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
 
@@ -111,6 +118,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const cpns = await getCoupons();
       const slides = await getHeroSlides();
       const banners = await getPromoBanners();
+      const secs = await getHomepageSections();
       const setts = await getStoreSettings();
 
       if (prods && prods.length > 0) setProducts(prods);
@@ -120,6 +128,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (cpns && cpns.length > 0) setCoupons(cpns);
       if (slides && slides.length > 0) setHeroSlides(slides);
       if (banners && banners.length > 0) setPromoBanners(banners);
+      if (secs) setHomepageSections(secs);
       if (setts) setSettings(setts);
       setIsDbLoaded(true);
     } catch (e) {
@@ -236,12 +245,20 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const updateHeroSlides = async (slides: HeroSlide[]) => {
+    setHeroSlides(slides);
     await saveHeroSlides(slides);
     await refreshDatabaseData();
   };
 
   const updatePromoBanners = async (banners: PromoBanner[]) => {
+    setPromoBanners(banners);
     await savePromoBanners(banners);
+    await refreshDatabaseData();
+  };
+
+  const updateHomepageSections = async (newSections: HomepageSections) => {
+    setHomepageSections(newSections);
+    await saveHomepageSections(newSections);
     await refreshDatabaseData();
   };
 
@@ -275,6 +292,8 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateHeroSlides,
         promoBanners,
         updatePromoBanners,
+        homepageSections,
+        updateHomepageSections,
         settings,
         updateSettings,
         isDbLoaded,

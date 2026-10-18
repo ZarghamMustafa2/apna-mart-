@@ -11,8 +11,11 @@ import { TrustSection } from '../components/home/TrustSection';
 import { TestimonialsSection } from '../components/home/TestimonialsSection';
 import { NewsletterSection } from '../components/home/NewsletterSection';
 import { SEOHead } from '../components/common/SEOHead';
+import { useAdminData } from '../context/AdminDataContext';
 
 export const HomePage: React.FC = () => {
+  const { homepageSections } = useAdminData();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -43,37 +46,35 @@ export const HomePage: React.FC = () => {
       />
 
       {/* 1. Hero / Main Banner */}
-      <HeroSection />
+      {homepageSections?.hero !== false && <HeroSection />}
 
       {/* 2. Shop by Category (Prominent Placement) */}
-      <ShopByCategorySection />
+      {homepageSections?.categories !== false && <ShopByCategorySection />}
 
-      {/* 3. Featured Products (Max 8 Products) */}
-      <FeaturedProductsSection />
+      {/* 3. Featured Products, New Arrivals, Best Sellers, Deals */}
+      {homepageSections?.products !== false && (
+        <>
+          <FeaturedProductsSection />
+          <NewArrivalsSection />
+          <BestSellersSection />
+          <SaleDealsSection />
+        </>
+      )}
 
       {/* 4. Promotional Split Banners */}
-      <PromoBanners />
+      {homepageSections?.promo !== false && <PromoBanners />}
 
-      {/* 5. New Arrivals (Max 8 Products) */}
-      <NewArrivalsSection />
+      {/* 5. Department Category Showcases */}
+      {homepageSections?.categories !== false && <CategoryShowcaseSection />}
 
-      {/* 6. Best Sellers (Max 8 Products) */}
-      <BestSellersSection />
+      {/* 6. Trust & Why Choose Us */}
+      {homepageSections?.trust !== false && <TrustSection />}
 
-      {/* 7. Special Deals & Discounts (Max 8 Products) */}
-      <SaleDealsSection />
+      {/* 7. Customer Testimonials */}
+      {homepageSections?.testimonials !== false && <TestimonialsSection />}
 
-      {/* 8. Department Category Showcases */}
-      <CategoryShowcaseSection />
-
-      {/* 9. Trust & Why Choose Us */}
-      <TrustSection />
-
-      {/* 10. Customer Testimonials */}
-      <TestimonialsSection />
-
-      {/* 11. Newsletter Subscription */}
-      <NewsletterSection />
+      {/* 8. Newsletter Subscription */}
+      {homepageSections?.newsletter !== false && <NewsletterSection />}
     </div>
   );
 };

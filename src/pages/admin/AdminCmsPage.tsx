@@ -1,25 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { HeroSlide } from '../../data/mockBanners';
+import { HomepageSections } from '../../services/cmsService';
 import { ImageUploader } from '../../components/common/ImageUploader';
 import { LayoutTemplate, Plus, Trash2, Eye, EyeOff, Save, Check, Image as ImageIcon } from 'lucide-react';
 
 export const AdminCmsPage: React.FC = () => {
-  const { heroSlides, updateHeroSlides } = useAdminData();
+  const { heroSlides, updateHeroSlides, homepageSections, updateHomepageSections } = useAdminData();
   const [slides, setSlides] = useState<HeroSlide[]>(heroSlides);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [sections, setSections] = useState({
-    hero: true,
-    categories: true,
-    promo: true,
-    products: true,
-    trust: true,
-    testimonials: true,
-    newsletter: true,
-  });
+  const [sections, setSections] = useState<HomepageSections>(homepageSections);
 
-  const handleToggleSection = (key: keyof typeof sections) => {
+  useEffect(() => {
+    if (heroSlides && heroSlides.length > 0) {
+      setSlides(heroSlides);
+    }
+  }, [heroSlides]);
+
+  useEffect(() => {
+    if (homepageSections) {
+      setSections(homepageSections);
+    }
+  }, [homepageSections]);
+
+  const handleToggleSection = (key: keyof HomepageSections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -52,10 +58,19 @@ export const AdminCmsPage: React.FC = () => {
     setSlides(copy);
   };
 
-  const handleSaveCms = () => {
-    updateHeroSlides(slides);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+  const handleSaveCms = async () => {
+    setIsSaving(true);
+    try {
+      await updateHeroSlides(slides);
+      await updateHomepageSections(sections);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save CMS layout:', err);
+      alert('Failed to save layout settings.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

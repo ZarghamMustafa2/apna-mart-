@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { useAdminData } from '../../context/AdminDataContext';
 import { mockPromoBanners } from '../../data/mockBanners';
 
 export const PromoBanners: React.FC = () => {
-  const banners = mockPromoBanners && mockPromoBanners.length > 0 ? mockPromoBanners : [];
+  const { promoBanners } = useAdminData();
+  const banners = promoBanners && promoBanners.length > 0 ? promoBanners : mockPromoBanners;
 
-  if (banners.length === 0) return null;
+  if (!banners || banners.length === 0) return null;
 
   return (
     <section className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-6">

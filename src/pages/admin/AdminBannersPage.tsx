@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { PromoBanner } from '../../data/mockBanners';
 import { ImageUploader } from '../../components/common/ImageUploader';
@@ -7,6 +7,12 @@ import { Plus, Trash2, Edit3, X, Image as ImageIcon } from 'lucide-react';
 export const AdminBannersPage: React.FC = () => {
   const { promoBanners, updatePromoBanners } = useAdminData();
   const [banners, setBanners] = useState<PromoBanner[]>(promoBanners);
+
+  useEffect(() => {
+    if (promoBanners && promoBanners.length > 0) {
+      setBanners(promoBanners);
+    }
+  }, [promoBanners]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingBanner, setEditingBanner] = useState<PromoBanner | null>(null);

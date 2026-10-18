@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminData } from '../../context/AdminDataContext';
 import { HeroSlide, PromoBanner } from '../../data/mockBanners';
+import { HomepageSections } from '../../services/cmsService';
 import { ImageUploader } from '../../components/common/ImageUploader';
 import { ApnaMartLogo } from '../../components/common/ApnaMartLogo';
 import {
   Palette,
   Image as ImageIcon,
-  Sparkles,
   Layers,
   Save,
   Check,
@@ -14,6 +14,8 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 
 export const AdminWebsiteDesignPage: React.FC = () => {
@@ -24,11 +26,14 @@ export const AdminWebsiteDesignPage: React.FC = () => {
     updateHeroSlides,
     promoBanners,
     updatePromoBanners,
+    homepageSections,
+    updateHomepageSections,
   } = useAdminData();
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'banners' | 'logo' | 'sections'>('banners');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Tab 1: Hero Slides & Promo Banners State
   const [slides, setSlides] = useState<HeroSlide[]>(heroSlides);
@@ -41,39 +46,89 @@ export const AdminWebsiteDesignPage: React.FC = () => {
   const [storeTagline, setStoreTagline] = useState(settings?.metaDescription || "Pakistan's Trusted Online Superstore");
 
   // Tab 3: Homepage Sections State
-  const [sections, setSections] = useState({
-    hero: true,
-    categories: true,
-    promo: true,
-    products: true,
-    trust: true,
-    testimonials: true,
-    newsletter: true,
-  });
+  const [sections, setSections] = useState<HomepageSections>(homepageSections);
+
+  // Sync state with Context / IndexedDB when loaded
+  useEffect(() => {
+    if (heroSlides && heroSlides.length > 0) {
+      setSlides(heroSlides);
+    }
+  }, [heroSlides]);
+
+  useEffect(() => {
+    if (promoBanners && promoBanners.length > 0) {
+      setBanners(promoBanners);
+    }
+  }, [promoBanners]);
+
+  useEffect(() => {
+    if (homepageSections) {
+      setSections(homepageSections);
+    }
+  }, [homepageSections]);
+
+  useEffect(() => {
+    if (settings) {
+      setLogoUrl(settings.logoUrl || '');
+      setFaviconUrl(settings.faviconUrl || '');
+      setStoreName(settings.storeName || 'ApnaMart');
+      setStoreTagline(settings.metaDescription || "Pakistan's Trusted Online Superstore");
+    }
+  }, [settings]);
 
   const showNotification = () => {
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   // Save Banners
-  const handleSaveBanners = () => {
-    updateHeroSlides(slides);
-    updatePromoBanners(banners);
-    showNotification();
+  const handleSaveBanners = async () => {
+    setIsSaving(true);
+    try {
+      await updateHeroSlides(slides);
+      await updatePromoBanners(banners);
+      showNotification();
+    } catch (err) {
+      console.error('Failed to save banners:', err);
+      alert('Error saving banners. Please check your network or try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Save Logo & Brand Identity
-  const handleSaveBranding = (e: React.FormEvent) => {
+  const handleSaveBranding = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings({
-      ...settings,
-      logoUrl: logoUrl || undefined,
-      faviconUrl: faviconUrl || undefined,
-      storeName,
-      metaDescription: storeTagline,
-    });
-    showNotification();
+    setIsSaving(true);
+    try {
+      await updateSettings({
+        ...settings,
+        logoUrl: logoUrl || undefined,
+        faviconUrl: faviconUrl || undefined,
+        storeName,
+        metaDescription: storeTagline,
+      });
+      showNotification();
+    } catch (err) {
+      console.error('Failed to save branding:', err);
+      alert('Error saving branding settings.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Save Homepage Section Settings
+  const handleSaveSections = async () => {
+    setIsSaving(true);
+    try {
+      await updateHomepageSections(sections);
+      showNotification();
+    } catch (err) {
+      console.error('Failed to save section settings:', err);
+      alert('Error saving section visibility settings.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Add a new hero banner slide
@@ -107,6 +162,13 @@ export const AdminWebsiteDesignPage: React.FC = () => {
     setSlides(copy);
   };
 
+  // Update promo banner field
+  const handleUpdateBannerField = (index: number, field: keyof PromoBanner, value: string) => {
+    const copy = [...banners];
+    copy[index] = { ...copy[index], [field]: value };
+    setBanners(copy);
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-8">
       {/* Page Header */}
@@ -123,12 +185,25 @@ export const AdminWebsiteDesignPage: React.FC = () => {
           </p>
         </div>
 
-        {saveSuccess && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>Changes saved successfully! Refresh customer website to view.</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2.5 bg-white border border-gray-200 hover:border-brand-500 hover:text-brand-600 text-gray-700 font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-xs transition-all"
+            title="Open storefront in a new tab"
+          >
+            <ExternalLink className="w-4 h-4 text-brand-600" />
+            <span>View Live Website</span>
+          </a>
+
+          {saveSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2 animate-fade-in">
+              <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>Changes saved successfully!</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 3 Simple Tabs */}
@@ -172,103 +247,185 @@ export const AdminWebsiteDesignPage: React.FC = () => {
 
       {/* TAB 1: HOMEPAGE BANNERS */}
       {activeTab === 'banners' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-gray-100">
-            <div>
-              <h2 className="text-base font-extrabold text-gray-900">Main Top Banners (Slider)</h2>
-              <p className="text-xs text-gray-500">These banners slide across the very top of your homepage.</p>
+        <div className="space-y-8">
+          {/* Main Top Banner Slider */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-gray-100 shadow-xs">
+              <div>
+                <h2 className="text-base font-extrabold text-gray-900">Main Top Banners (Slider)</h2>
+                <p className="text-xs text-gray-500">These banners slide across the very top of your homepage.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddSlide}
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Banner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveBanners}
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save All Banners'}</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAddSlide}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New Banner</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveBanners}
-                className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Banners</span>
-              </button>
+
+            <div className="space-y-6">
+              {slides.map((slide, idx) => (
+                <div key={slide.id} className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <span className="text-xs font-extrabold text-brand-600 uppercase tracking-wider">
+                      Banner Slide #{idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSlide(idx)}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"
+                      title="Delete banner"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    {/* Left: Banner Image Direct Uploader */}
+                    <div>
+                      <ImageUploader
+                        value={slide.image}
+                        onChange={(url) => handleUpdateSlideField(idx, 'image', url)}
+                        label="Banner Image (Click or Drag photo here)"
+                        aspectRatio="video"
+                        placeholderText="Upload JPG, PNG or WebP image"
+                      />
+                    </div>
+
+                    {/* Right: Text on Banner */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Badge Tag</label>
+                        <input
+                          type="text"
+                          value={slide.badge}
+                          onChange={(e) => handleUpdateSlideField(idx, 'badge', e.target.value)}
+                          placeholder="e.g. SUMMER SALE, NEW ARRIVAL"
+                          className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Headline Text</label>
+                        <input
+                          type="text"
+                          value={slide.title}
+                          onChange={(e) => handleUpdateSlideField(idx, 'title', e.target.value)}
+                          placeholder="e.g. Best Deals on Mobile Phones"
+                          className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Description / Subtitle</label>
+                        <input
+                          type="text"
+                          value={slide.subtitle}
+                          onChange={(e) => handleUpdateSlideField(idx, 'subtitle', e.target.value)}
+                          placeholder="e.g. Up to 40% OFF with fast cash on delivery"
+                          className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Button Text</label>
+                          <input
+                            type="text"
+                            value={slide.buttonText}
+                            onChange={(e) => handleUpdateSlideField(idx, 'buttonText', e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1">Button Link</label>
+                          <input
+                            type="text"
+                            value={slide.buttonLink}
+                            onChange={(e) => handleUpdateSlideField(idx, 'buttonLink', e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-6">
-            {slides.map((slide, idx) => (
-              <div key={slide.id} className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                  <span className="text-xs font-extrabold text-brand-600 uppercase tracking-wider">
-                    Banner Slide #{idx + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteSlide(idx)}
-                    className="p-2 text-gray-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors"
-                    title="Delete banner"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+          {/* Section 2: Special Offers Promo Banners (2 Cards below hero) */}
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-xs">
+              <h2 className="text-base font-extrabold text-gray-900">Special Offer Cards (Promo Banners)</h2>
+              <p className="text-xs text-gray-500">The 2 side-by-side promotional cards displayed below the hero slider.</p>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                  {/* Left: Banner Image Direct Uploader */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {banners.slice(0, 2).map((banner, idx) => (
+                <div key={banner.id || idx} className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
+                  <span className="text-xs font-extrabold text-brand-600 uppercase tracking-wider block border-b border-gray-100 pb-2">
+                    Promo Card #{idx + 1}
+                  </span>
+
                   <div>
                     <ImageUploader
-                      value={slide.image}
-                      onChange={(url) => handleUpdateSlideField(idx, 'image', url)}
-                      label="Banner Image (Click or Drag photo here)"
+                      value={banner.image}
+                      onChange={(url) => handleUpdateBannerField(idx, 'image', url)}
+                      label="Card Image"
                       aspectRatio="video"
-                      placeholderText="Upload JPG, PNG or WebP image"
+                      placeholderText="Upload card photo"
                     />
                   </div>
 
-                  {/* Right: Text on Banner */}
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Badge Tag</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Tag</label>
                       <input
                         type="text"
-                        value={slide.badge}
-                        onChange={(e) => handleUpdateSlideField(idx, 'badge', e.target.value)}
-                        placeholder="e.g. SUMMER SALE, NEW ARRIVAL"
+                        value={banner.tag}
+                        onChange={(e) => handleUpdateBannerField(idx, 'tag', e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Headline Text</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Title</label>
                       <input
                         type="text"
-                        value={slide.title}
-                        onChange={(e) => handleUpdateSlideField(idx, 'title', e.target.value)}
-                        placeholder="e.g. Best Deals on Mobile Phones"
+                        value={banner.title}
+                        onChange={(e) => handleUpdateBannerField(idx, 'title', e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Description / Subtitle</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Subtitle</label>
                       <input
                         type="text"
-                        value={slide.subtitle}
-                        onChange={(e) => handleUpdateSlideField(idx, 'subtitle', e.target.value)}
-                        placeholder="e.g. Up to 40% OFF with fast cash on delivery"
+                        value={banner.subtitle}
+                        onChange={(e) => handleUpdateBannerField(idx, 'subtitle', e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
                       />
                     </div>
-
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-gray-700 mb-1">Button Text</label>
                         <input
                           type="text"
-                          value={slide.buttonText}
-                          onChange={(e) => handleUpdateSlideField(idx, 'buttonText', e.target.value)}
+                          value={banner.buttonText}
+                          onChange={(e) => handleUpdateBannerField(idx, 'buttonText', e.target.value)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
                         />
                       </div>
@@ -276,25 +433,27 @@ export const AdminWebsiteDesignPage: React.FC = () => {
                         <label className="block text-xs font-bold text-gray-700 mb-1">Button Link</label>
                         <input
                           type="text"
-                          value={slide.buttonLink}
-                          onChange={(e) => handleUpdateSlideField(idx, 'buttonLink', e.target.value)}
+                          value={banner.buttonLink}
+                          onChange={(e) => handleUpdateBannerField(idx, 'buttonLink', e.target.value)}
                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold"
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
             <button
               type="button"
               onClick={handleSaveBanners}
-              className="px-8 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all"
+              disabled={isSaving}
+              className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-60"
             >
-              Save All Banners
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving Banners...' : 'Save All Banners'}</span>
             </button>
           </div>
         </div>
@@ -373,9 +532,11 @@ export const AdminWebsiteDesignPage: React.FC = () => {
             <div className="pt-4 border-t border-gray-100 flex justify-end">
               <button
                 type="submit"
-                className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all"
+                disabled={isSaving}
+                className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-60"
               >
-                Save Store Logo & Name
+                <Save className="w-4 h-4" />
+                <span>{isSaving ? 'Saving...' : 'Save Store Logo & Name'}</span>
               </button>
             </div>
           </div>
@@ -388,7 +549,7 @@ export const AdminWebsiteDesignPage: React.FC = () => {
           <div className="border-b border-gray-100 pb-4">
             <h2 className="text-base font-extrabold text-gray-900">Show or Hide Website Sections</h2>
             <p className="text-xs text-gray-500 font-medium">
-              Click on any section to easily turn it on or off on your customer website.
+              Click on any section below to toggle it Visible or Hidden on your customer website. Changes will persist permanently in your database.
             </p>
           </div>
 
@@ -402,20 +563,20 @@ export const AdminWebsiteDesignPage: React.FC = () => {
               { key: 'testimonials', title: '6. Customer Reviews', desc: 'Verified buyer testimonials and ratings on the homepage' },
               { key: 'newsletter', title: '7. Discount Voucher Banner', desc: 'Sign up voucher box at the bottom of the page' },
             ].map((sec) => {
-              const isEnabled = sections[sec.key as keyof typeof sections];
+              const isEnabled = sections[sec.key as keyof HomepageSections];
               return (
                 <div
                   key={sec.key}
                   onClick={() =>
                     setSections((prev) => ({
                       ...prev,
-                      [sec.key]: !prev[sec.key as keyof typeof sections],
+                      [sec.key]: !prev[sec.key as keyof HomepageSections],
                     }))
                   }
-                  className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                  className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between select-none ${
                     isEnabled
-                      ? 'border-brand-600 bg-brand-50/40 text-gray-900'
-                      : 'border-gray-100 bg-gray-50/50 text-gray-400 opacity-60'
+                      ? 'border-brand-600 bg-brand-50/40 text-gray-900 hover:border-brand-700'
+                      : 'border-gray-200 bg-gray-50/60 text-gray-400 opacity-60 hover:opacity-80'
                   }`}
                 >
                   <div className="space-y-1">
@@ -425,7 +586,7 @@ export const AdminWebsiteDesignPage: React.FC = () => {
 
                   <div className="flex-shrink-0 ml-3">
                     {isEnabled ? (
-                      <span className="px-3 py-1 bg-brand-600 text-white text-[11px] font-extrabold rounded-full flex items-center gap-1">
+                      <span className="px-3 py-1 bg-brand-600 text-white text-[11px] font-extrabold rounded-full flex items-center gap-1 shadow-xs">
                         <Eye className="w-3.5 h-3.5" />
                         Visible
                       </span>
@@ -441,13 +602,18 @@ export const AdminWebsiteDesignPage: React.FC = () => {
             })}
           </div>
 
-          <div className="pt-4 border-t border-gray-100 flex justify-end">
+          <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-500 font-medium">
+              Click &quot;Save Section Settings&quot; to apply changes immediately to your storefront.
+            </span>
             <button
               type="button"
-              onClick={showNotification}
-              className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all"
+              onClick={handleSaveSections}
+              disabled={isSaving}
+              className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg transition-all flex items-center gap-2 disabled:opacity-60"
             >
-              Save Section Settings
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving Sections...' : 'Save Section Settings'}</span>
             </button>
           </div>
         </div>
