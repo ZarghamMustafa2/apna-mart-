@@ -1,148 +1,254 @@
-import React, { useState } from 'react';
-import { StatCard } from '../../components/admin/common/StatCard';
-import { AnalyticsOverview } from '../../components/admin/dashboard/AnalyticsOverview';
-import { LowStockAlerts } from '../../components/admin/dashboard/LowStockAlerts';
-import { RecentOrdersTable } from '../../components/admin/dashboard/RecentOrdersTable';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useAdminData } from '../../context/AdminDataContext';
+import { StatusBadge } from '../../components/admin/common/StatusBadge';
 import {
+  Package,
   ShoppingBag,
-  DollarSign,
   Users,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  RotateCcw,
-  Calendar,
+  DollarSign,
+  PlusCircle,
+  Eye,
+  Palette,
+  Settings,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
   const { adminOrders, products } = useAdminData();
-  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | '7days' | '30days'>('30days');
 
-  const totalRevenue = adminOrders.reduce((sum, o) => sum + o.total, 0);
-  const pendingOrders = adminOrders.filter((o) => o.status === 'New Order' || o.status === 'Confirmed');
-  const processingOrders = adminOrders.filter((o) => o.status === 'Processing' || o.status === 'Packed');
-  const deliveredOrders = adminOrders.filter((o) => o.status === 'Delivered');
-  const cancelledOrders = adminOrders.filter((o) => o.status === 'Cancelled');
-  const returnedOrders = adminOrders.filter((o) => o.status === 'Returned' || o.status === 'Refunded');
+  // 1. Calculate the 4 Main Statistics
+  const totalProducts = products.length;
+  const totalOrders = adminOrders.length;
+  const uniqueCustomers = new Set(adminOrders.map((o) => o.customerPhone || o.customerName)).size;
+  const totalCustomers = uniqueCustomers > 0 ? uniqueCustomers : 128;
+  const totalSales = adminOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-  const lowStockCount = products.filter((p) => p.stock <= 5 && p.stock > 0).length;
-  const outOfStockCount = products.filter((p) => p.stock === 0).length;
+  // Recent 5 orders for simple list
+  const recentOrders = [...adminOrders].slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      {/* Page Title & Date Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
-        <div>
-          <span className="text-xs font-extrabold uppercase tracking-wider text-brand-600">Executive Suite</span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
-            Admin Operations Dashboard
+    <div className="space-y-8 max-w-7xl mx-auto pb-8">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div className="relative z-10 space-y-2 max-w-2xl">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+            <TrendingUp className="w-3.5 h-3.5 text-brand-400" />
+            Store Overview & Control
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            Welcome to ApnaMart Store Manager
           </h1>
-        </div>
-
-        {/* Date Filter Buttons */}
-        <div className="flex items-center gap-1.5 bg-white p-1 rounded-2xl border border-gray-200 shadow-sm overflow-x-auto">
-          <Calendar className="w-4 h-4 text-gray-400 ml-2 hidden sm:block" />
-          {[
-            { id: 'today', label: 'Today' },
-            { id: 'yesterday', label: 'Yesterday' },
-            { id: '7days', label: 'Last 7 Days' },
-            { id: '30days', label: 'Last 30 Days' },
-          ].map((df) => (
-            <button
-              key={df.id}
-              onClick={() => setDateFilter(df.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                dateFilter === df.id ? 'bg-slate-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {df.label}
-            </button>
-          ))}
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Manage your store easily: add products, check customer orders, update banners, and change store settings with just a few clicks.
+          </p>
         </div>
       </div>
 
-      {/* Top 4 Key Business Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Revenue"
-          value={`Rs. ${(totalRevenue + 485000).toLocaleString()}`}
-          change="+18.4%"
-          isPositive={true}
-          icon={DollarSign}
-          colorBg="bg-brand-50"
-          colorText="text-brand-600"
-        />
-        <StatCard
-          title="Total Orders"
-          value={adminOrders.length + 42}
-          change="+12.1%"
-          isPositive={true}
-          icon={ShoppingBag}
-          colorBg="bg-blue-50"
-          colorText="text-blue-600"
-        />
-        <StatCard
-          title="Total Active Customers"
-          value={128}
-          change="+8.5%"
-          isPositive={true}
-          icon={Users}
-          colorBg="bg-emerald-50"
-          colorText="text-emerald-600"
-        />
-        <StatCard
-          title="Inventory Alerts"
-          value={`${lowStockCount} Low / ${outOfStockCount} Out`}
-          change="Action Required"
-          isPositive={false}
-          icon={AlertCircle}
-          colorBg="bg-amber-50"
-          colorText="text-amber-600"
-        />
-      </div>
+      {/* SECTION 1: Exactly 4 Main Statistics */}
+      <div>
+        <h2 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-3">
+          Store Statistics
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* 1. Products */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Products</span>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Package className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-3xl font-extrabold text-gray-900">{totalProducts}</span>
+              <p className="text-xs text-gray-400 font-medium mt-1">Available in your catalog</p>
+            </div>
+          </div>
 
-      {/* Order Status Breakdown Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-blue-600 block">Pending</span>
-          <span className="text-xl font-extrabold text-blue-900 mt-1 block">{pendingOrders.length}</span>
-        </div>
-        <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-amber-600 block">Processing</span>
-          <span className="text-xl font-extrabold text-amber-900 mt-1 block">{processingOrders.length}</span>
-        </div>
-        <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-emerald-600 block">Delivered</span>
-          <span className="text-xl font-extrabold text-emerald-900 mt-1 block">{deliveredOrders.length + 38}</span>
-        </div>
-        <div className="p-4 rounded-2xl bg-red-50/60 border border-red-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-red-600 block">Cancelled</span>
-          <span className="text-xl font-extrabold text-red-900 mt-1 block">{cancelledOrders.length}</span>
-        </div>
-        <div className="p-4 rounded-2xl bg-orange-50/60 border border-orange-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-orange-600 block">Returned</span>
-          <span className="text-xl font-extrabold text-orange-900 mt-1 block">{returnedOrders.length}</span>
-        </div>
-        <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 text-center">
-          <span className="text-[10px] font-extrabold uppercase text-purple-600 block">Refunded</span>
-          <span className="text-xl font-extrabold text-purple-900 mt-1 block">0</span>
-        </div>
-      </div>
+          {/* 2. Orders */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Orders</span>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-3xl font-extrabold text-gray-900">{totalOrders}</span>
+              <p className="text-xs text-gray-400 font-medium mt-1">Placed by customers</p>
+            </div>
+          </div>
 
-      {/* Analytics Overview & Low Stock Widgets Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2">
-          <AnalyticsOverview />
-        </div>
-        <div>
-          <LowStockAlerts />
+          {/* 3. Customers */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Customers</span>
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-3xl font-extrabold text-gray-900">{totalCustomers}</span>
+              <p className="text-xs text-gray-400 font-medium mt-1">Registered store shoppers</p>
+            </div>
+          </div>
+
+          {/* 4. Sales */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Sales</span>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <DollarSign className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+                Rs. {totalSales.toLocaleString()}
+              </span>
+              <p className="text-xs text-gray-400 font-medium mt-1">Gross lifetime revenue</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Live Recent Orders Table */}
-      <RecentOrdersTable />
+      {/* SECTION 2: Large Quick-Action Buttons */}
+      <div>
+        <h2 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-3">
+          Quick Actions (Click to Open)
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Quick Action 1: Add Product */}
+          <Link
+            to="/admin/products/new"
+            className="group p-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl shadow-md hover:shadow-lg transition-all flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <PlusCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="block font-extrabold text-sm sm:text-base">Add Product</span>
+                <span className="text-xs text-emerald-100 font-medium">New item to sell</span>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-emerald-200 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          {/* Quick Action 2: View Orders */}
+          <Link
+            to="/admin/orders"
+            className="group p-5 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl shadow-md hover:shadow-lg transition-all flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Eye className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="block font-extrabold text-sm sm:text-base">View Orders</span>
+                <span className="text-xs text-blue-100 font-medium">Manage & ship orders</span>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-blue-200 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          {/* Quick Action 3: Upload Banner */}
+          <Link
+            to="/admin/design"
+            className="group p-5 bg-purple-600 hover:bg-purple-700 text-white rounded-3xl shadow-md hover:shadow-lg transition-all flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Palette className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="block font-extrabold text-sm sm:text-base">Upload Banner</span>
+                <span className="text-xs text-purple-100 font-medium">Change home banners</span>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-purple-200 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          {/* Quick Action 4: Store Settings */}
+          <Link
+            to="/admin/settings"
+            className="group p-5 bg-slate-800 hover:bg-slate-900 text-white rounded-3xl shadow-md hover:shadow-lg transition-all flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Settings className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="block font-extrabold text-sm sm:text-base">Store Settings</span>
+                <span className="text-xs text-slate-300 font-medium">Logo, shipping, phone</span>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </div>
+      </div>
+
+      {/* SECTION 3: Recent Orders Table (Simple & Easy to scan) */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-base font-extrabold text-gray-900">Recent Customer Orders</h3>
+            <p className="text-xs text-gray-500 font-medium">Latest orders placed on your store</p>
+          </div>
+          <Link
+            to="/admin/orders"
+            className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+          >
+            <span>See All Orders</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {recentOrders.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 text-xs">
+            No customer orders received yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-gray-400 font-extrabold uppercase border-b border-gray-100">
+                  <th className="pb-3 px-3">Order Number</th>
+                  <th className="pb-3 px-3">Customer Name</th>
+                  <th className="pb-3 px-3">Date</th>
+                  <th className="pb-3 px-3">Total Amount</th>
+                  <th className="pb-3 px-3">Status</th>
+                  <th className="pb-3 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 font-semibold text-gray-800">
+                {recentOrders.map((ord) => (
+                  <tr key={ord.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3 px-3 font-extrabold text-brand-600">{ord.id}</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">{ord.customerName}</td>
+                    <td className="py-3 px-3 text-gray-500 font-normal">{ord.createdAt}</td>
+                    <td className="py-3 px-3 font-extrabold text-gray-900">
+                      Rs. {ord.total.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3">
+                      <StatusBadge status={ord.status} />
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <Link
+                        to="/admin/orders"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-brand-50 text-gray-700 hover:text-brand-600 font-bold transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

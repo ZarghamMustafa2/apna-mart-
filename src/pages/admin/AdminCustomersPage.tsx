@@ -53,10 +53,13 @@ export const AdminCustomersPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
-          <span className="text-xs font-extrabold uppercase tracking-wider text-brand-600">Customer CRM</span>
+          <span className="text-xs font-extrabold uppercase tracking-wider text-brand-600">Store Shoppers</span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
             Registered Customers ({filtered.length})
           </h1>
+          <p className="text-xs text-gray-500 font-medium mt-1">
+            View customer accounts, contact phone numbers, delivery cities, and order history.
+          </p>
         </div>
       </div>
 

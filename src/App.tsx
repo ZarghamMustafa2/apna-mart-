@@ -57,6 +57,7 @@ import { AdminCouponsPage } from './pages/admin/AdminCouponsPage';
 import { AdminReviewsPage } from './pages/admin/AdminReviewsPage';
 import { AdminCmsPage } from './pages/admin/AdminCmsPage';
 import { AdminBannersPage } from './pages/admin/AdminBannersPage';
+import { AdminWebsiteDesignPage } from './pages/admin/AdminWebsiteDesignPage';
 import { AdminAnalyticsPage } from './pages/admin/AdminAnalyticsPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminNotificationsPage } from './pages/admin/AdminNotificationsPage';
@@ -219,6 +220,16 @@ export const App: React.FC = () => {
                             <ProtectedAdminRoute requiredPermission="manage_cms">
                               <AdminLayout>
                                 <AdminBannersPage />
+                              </AdminLayout>
+                            </ProtectedAdminRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/design"
+                          element={
+                            <ProtectedAdminRoute requiredPermission="manage_cms">
+                              <AdminLayout>
+                                <AdminWebsiteDesignPage />
                               </AdminLayout>
                             </ProtectedAdminRoute>
                           }
