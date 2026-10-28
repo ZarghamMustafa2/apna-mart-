@@ -18,13 +18,15 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  CloudOff,
+  Database,
 } from 'lucide-react';
 
 export const AdminProductEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const navigate = useNavigate();
-  const { products, addProduct, updateProduct, deleteProduct, categories } = useAdminData();
+  const { products, addProduct, updateProduct, deleteProduct, categories, isCloudConnected } = useAdminData();
   const { hasPermission } = useAdminAuth();
 
   const canViewPurchaseCost = hasPermission('view_purchase_cost');
@@ -145,7 +147,7 @@ export const AdminProductEditPage: React.FC = () => {
       }
       navigate('/admin/products');
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save product. Please try again.');
+      setFormError(err.message || 'Failed to save product to central database.');
     } finally {
       setIsSaving(false);
     }
@@ -181,15 +183,40 @@ export const AdminProductEditPage: React.FC = () => {
             className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
           >
             <Save className="w-4 h-4" />
-            <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+            <span>{isSaving ? 'Saving to Database...' : 'Save Product'}</span>
           </button>
         </div>
       </div>
 
+      {/* Central Database Disconnection Warning */}
+      {!isCloudConnected && (
+        <div className="p-4 bg-amber-50 border-2 border-amber-300 text-amber-950 rounded-2xl flex items-start gap-3 shadow-xs">
+          <CloudOff className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-extrabold block text-sm text-amber-900">
+              Central Online Database is Not Connected
+            </span>
+            <p className="mt-0.5">
+              The website is currently running in local browser preview mode. Products added now will <strong>only exist on this specific browser</strong> and will <strong>NOT</strong> appear on your friend's device or the live customer storefront until Supabase is connected.
+            </p>
+            <Link
+              to="/admin/settings"
+              className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors text-[11px]"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Connect Supabase in Store Settings</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {formError && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-bold rounded-2xl flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600" />
-          <span>{formError}</span>
+        <div className="p-4 bg-red-50 border-2 border-red-300 text-red-800 text-xs sm:text-sm font-bold rounded-2xl flex items-start gap-2.5">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-600 mt-0.5" />
+          <div>
+            <span className="font-extrabold block text-sm text-red-950">Save Failed</span>
+            <span>{formError}</span>
+          </div>
         </div>
       )}
 
@@ -563,7 +590,7 @@ export const AdminProductEditPage: React.FC = () => {
             className="w-full sm:w-auto px-10 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-105"
           >
             <Save className="w-5 h-5" />
-            <span>{isSaving ? 'Saving Product...' : 'Save Product Now'}</span>
+            <span>{isSaving ? 'Saving to Database...' : 'Save Product Now'}</span>
           </button>
         </div>
       </form>
