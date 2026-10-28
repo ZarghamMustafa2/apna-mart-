@@ -1,3 +1,6 @@
+import { isSupabaseConfigured } from './supabase';
+import { uploadImageToSupabase } from './supabaseStorage';
+
 /**
  * Centralized Media & Image Service for ApnaMart
  *
@@ -199,9 +202,25 @@ export async function uploadImage(
   file: File,
   options?: ImageUploadOptions
 ): Promise<string> {
-  // In the future, this can branch to:
-  // if (USE_CLOUD_STORAGE) return uploadToCloudProvider(file);
-  return processAndOptimizeImage(file, options);
+  const optimizedDataUrl = await processAndOptimizeImage(file, options);
+  if (isSupabaseConfigured()) {
+    try {
+      const bucket =
+        options?.preserveTransparency || options?.format === 'image/png'
+          ? 'apnamart-assets'
+          : options?.maxWidth && options.maxWidth > 1400
+          ? 'apnamart-banners'
+          : options?.maxWidth && options.maxWidth <= 400
+          ? 'apnamart-avatars'
+          : 'apnamart-products';
+
+      return await uploadImageToSupabase(optimizedDataUrl, bucket);
+    } catch (e) {
+      console.warn('Supabase storage upload fallback to optimized data url:', e);
+      return optimizedDataUrl;
+    }
+  }
+  return optimizedDataUrl;
 }
 
 /**

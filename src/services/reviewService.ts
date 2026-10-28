@@ -1,4 +1,10 @@
 import { dbGetAll, dbGetById, dbPut, dbDelete } from './db';
+import { isSupabaseConfigured } from './supabase';
+import {
+  fetchReviewsFromSupabase,
+  saveReviewToSupabase,
+  deleteReviewFromSupabase,
+} from './supabaseDb';
 
 export interface CustomerReview {
   id: string;
@@ -50,6 +56,20 @@ const defaultReviews: CustomerReview[] = [
 ];
 
 export async function getReviews(): Promise<CustomerReview[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const cloudReviews = await fetchReviewsFromSupabase();
+      if (cloudReviews && cloudReviews.length > 0) {
+        for (const r of cloudReviews) {
+          dbPut('reviews', r).catch(() => {});
+        }
+        return cloudReviews;
+      }
+    } catch (e) {
+      console.warn('Supabase getReviews fallback to local db:', e);
+    }
+  }
+
   try {
     const list = await dbGetAll<CustomerReview>('reviews');
     if (list && list.length > 0) {
@@ -95,6 +115,14 @@ export async function submitReview(data: {
     verifiedPurchase: true,
   };
 
+  if (isSupabaseConfigured()) {
+    try {
+      await saveReviewToSupabase(newRev);
+    } catch (e) {
+      console.error('Supabase submitReview error:', e);
+    }
+  }
+
   await dbPut('reviews', newRev);
   return newRev;
 }
@@ -103,13 +131,32 @@ export async function updateReviewStatus(
   reviewId: string,
   newStatus: 'Approved' | 'Pending' | 'Hidden'
 ): Promise<void> {
-  const rev = await dbGetById<CustomerReview>('reviews', reviewId);
+  let rev = await dbGetById<CustomerReview>('reviews', reviewId);
+  if (!rev && isSupabaseConfigured()) {
+    const all = await fetchReviewsFromSupabase();
+    rev = all.find((r) => r.id === reviewId);
+  }
+
   if (rev) {
     rev.status = newStatus;
+    if (isSupabaseConfigured()) {
+      try {
+        await saveReviewToSupabase(rev);
+      } catch (e) {
+        console.error('Supabase updateReviewStatus error:', e);
+      }
+    }
     await dbPut('reviews', rev);
   }
 }
 
 export async function deleteReview(reviewId: string): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      await deleteReviewFromSupabase(reviewId);
+    } catch (e) {
+      console.error('Supabase deleteReview error:', e);
+    }
+  }
   await dbDelete('reviews', reviewId);
 }

@@ -3,6 +3,7 @@ import { Search, Users, Mail, Phone, MapPin, Eye, Calendar, ShoppingBag } from '
 import { Modal } from '../../components/common/Modal';
 import { useAdminData } from '../../context/AdminDataContext';
 import { dbGetAll } from '../../services/db';
+import { isSupabaseConfigured, fetchCustomersFromSupabase } from '../../services/apiServices';
 
 export const AdminCustomersPage: React.FC = () => {
   const { adminOrders } = useAdminData();
@@ -13,9 +14,22 @@ export const AdminCustomersPage: React.FC = () => {
 
   const loadCustomers = async () => {
     try {
-      const allUsers = await dbGetAll<any>('users');
-      // Registered customers are users without admin roles
-      const registeredCustomers = (allUsers || []).filter((u) => !u.role);
+      let registeredCustomers: any[] = [];
+      if (isSupabaseConfigured()) {
+        try {
+          const cloud = await fetchCustomersFromSupabase();
+          if (cloud && cloud.length > 0) {
+            registeredCustomers = cloud;
+          }
+        } catch (e) {
+          console.warn('Supabase customer fetch fallback:', e);
+        }
+      }
+
+      if (registeredCustomers.length === 0) {
+        const allUsers = await dbGetAll<any>('users');
+        registeredCustomers = (allUsers || []).filter((u) => !u.role);
+      }
 
       // Map with live order counts and spending
       const mapped = registeredCustomers.map((u) => {
@@ -43,7 +57,7 @@ export const AdminCustomersPage: React.FC = () => {
           address,
           totalOrders,
           totalSpent,
-          createdAt: u.createdAt || '2026-01-15',
+          createdAt: u.createdAt || u.created_at || '2026-01-15',
           avatar: u.avatar,
         };
       });
@@ -84,80 +98,122 @@ export const AdminCustomersPage: React.FC = () => {
     loadCustomers();
   }, [adminOrders]);
 
-  const filtered = customerList.filter(
+  const filteredCustomers = customerList.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase()) ||
-      (c.phone && c.phone.includes(search)) ||
-      (c.city && c.city.toLowerCase().includes(search.toLowerCase()))
+      c.phone.includes(search) ||
+      c.city.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
-          <span className="text-xs font-extrabold uppercase tracking-wider text-brand-600">Store Shoppers</span>
+          <span className="text-xs font-extrabold uppercase tracking-wider text-brand-600">User Management</span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mt-0.5">
-            Registered Customers ({filtered.length})
+            Store Customers ({customerList.length})
           </h1>
-          <p className="text-xs text-gray-500 font-medium mt-1">
-            Live database view of registered customer accounts, delivery cities, and order history.
-          </p>
+          <p className="text-xs text-gray-500 font-medium">Real-time buyer profiles, lifetime spend, order history & contact records</p>
         </div>
-      </div>
 
-      <div className="p-4 bg-white rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
-        <div className="relative max-w-md w-full">
+        {/* Live Search */}
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search customers by name, email, phone, city..."
+            placeholder="Search by name, email, phone, city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500"
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         </div>
       </div>
 
+      {/* Customers Table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-gray-50/80 text-gray-400 font-extrabold uppercase border-b border-gray-100">
-                <th className="py-3.5 px-4">Customer Name</th>
-                <th className="py-3.5 px-4">Email</th>
-                <th className="py-3.5 px-4">Phone</th>
-                <th className="py-3.5 px-4">City</th>
-                <th className="py-3.5 px-4">Total Orders</th>
-                <th className="py-3.5 px-4">Total Spent</th>
-                <th className="py-3.5 px-4">Joined Date</th>
+                <th className="py-3.5 px-4">Customer</th>
+                <th className="py-3.5 px-4">Contact Info</th>
+                <th className="py-3.5 px-4">Location</th>
+                <th className="py-3.5 px-4">Orders Placed</th>
+                <th className="py-3.5 px-4">Total Spend</th>
+                <th className="py-3.5 px-4">Joined On</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-semibold text-gray-800">
-              {filtered.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-400">
-                    {isLoading ? 'Loading customers from database...' : 'No customer records found matching your search.'}
+                  <td colSpan={7} className="py-12 text-center text-gray-400">
+                    Loading customer database...
+                  </td>
+                </tr>
+              ) : filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-400">
+                    No customers match your search criteria.
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/50">
-                    <td className="py-3.5 px-4 font-bold text-gray-900">{c.name}</td>
-                    <td className="py-3.5 px-4 text-gray-600">{c.email}</td>
-                    <td className="py-3.5 px-4 font-mono">{c.phone}</td>
-                    <td className="py-3.5 px-4">{c.city}</td>
-                    <td className="py-3.5 px-4 font-extrabold text-brand-600">{c.totalOrders} Orders</td>
-                    <td className="py-3.5 px-4 font-extrabold text-gray-900">Rs. {c.totalSpent.toLocaleString()}</td>
-                    <td className="py-3.5 px-4 text-gray-400 font-normal">{c.createdAt}</td>
+                filteredCustomers.map((customer) => (
+                  <tr key={customer.id} className="hover:bg-gray-50/50">
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={customer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                          alt={customer.name}
+                          className="w-9 h-9 rounded-full object-cover border border-gray-100 flex-shrink-0 bg-gray-50"
+                        />
+                        <div>
+                          <div className="font-extrabold text-gray-900">{customer.name}</div>
+                          <div className="text-[10px] text-gray-400 font-normal">ID: {customer.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="space-y-0.5">
+                        <div className="text-gray-900 flex items-center gap-1.5 font-medium">
+                          <Mail className="w-3 h-3 text-gray-400" />
+                          <span>{customer.email}</span>
+                        </div>
+                        <div className="text-gray-500 flex items-center gap-1.5 font-normal">
+                          <Phone className="w-3 h-3 text-gray-400" />
+                          <span>{customer.phone}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1 text-gray-700">
+                        <MapPin className="w-3.5 h-3.5 text-brand-600 flex-shrink-0" />
+                        <span className="font-bold">{customer.city}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200">
+                        <ShoppingBag className="w-3 h-3" />
+                        {customer.totalOrders}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-extrabold text-brand-600">
+                      Rs. {customer.totalSpent.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 text-gray-400 font-normal">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{customer.createdAt}</span>
+                      </div>
+                    </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
-                        onClick={() => setSelectedCustomer(c)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-                        title="View Customer Profile"
+                        onClick={() => setSelectedCustomer(customer)}
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl inline-flex items-center gap-1 transition-colors"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Profile</span>
                       </button>
                     </td>
                   </tr>
@@ -168,34 +224,67 @@ export const AdminCustomersPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Customer Profile Modal */}
       {selectedCustomer && (
         <Modal
           isOpen={!!selectedCustomer}
           onClose={() => setSelectedCustomer(null)}
-          title={`Customer Details - ${selectedCustomer.name}`}
+          title={`Customer Profile: ${selectedCustomer.name}`}
           maxWidth="md"
         >
-          <div className="space-y-4 text-xs">
-            <div className="p-4 bg-gray-50 rounded-2xl space-y-2">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                <span className="font-extrabold text-sm text-gray-900">{selectedCustomer.name}</span>
-                <span className="text-[11px] text-gray-500">Joined: {selectedCustomer.createdAt}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-gray-700">
-                <div>Email: <strong className="text-gray-900 block">{selectedCustomer.email}</strong></div>
-                <div>Phone: <strong className="text-gray-900 block">{selectedCustomer.phone}</strong></div>
-              </div>
-              <div className="pt-1 text-gray-700">
-                Delivery City: <strong className="text-gray-900">{selectedCustomer.city}</strong>
-              </div>
-              <div className="text-gray-700">
-                Delivery Address: <strong className="text-gray-900">{selectedCustomer.address}</strong>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <img
+                src={selectedCustomer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
+                alt={selectedCustomer.name}
+                className="w-16 h-16 rounded-full object-cover border"
+              />
+              <div>
+                <h4 className="font-extrabold text-base text-gray-900">{selectedCustomer.name}</h4>
+                <p className="text-xs text-gray-500">{selectedCustomer.email}</p>
+                <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                  Verified Store Buyer
+                </span>
               </div>
             </div>
 
-            <div className="p-4 bg-brand-50/60 rounded-2xl text-brand-900 font-bold space-y-1">
-              <div>Total Orders Placed: {selectedCustomer.totalOrders}</div>
-              <div>Lifetime Spending: Rs. {selectedCustomer.totalSpent.toLocaleString()}</div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Orders</span>
+                <span className="font-extrabold text-sm text-gray-900">{selectedCustomer.totalOrders} Orders</span>
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <span className="text-gray-400 block text-[10px] uppercase font-bold">Lifetime Spend</span>
+                <span className="font-extrabold text-sm text-brand-600">Rs. {selectedCustomer.totalSpent.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div>
+                <span className="text-gray-400 font-bold block text-[10px] uppercase">Phone Number</span>
+                <span className="font-semibold text-gray-800">{selectedCustomer.phone}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 font-bold block text-[10px] uppercase">Default Shipping Address</span>
+                <span className="font-semibold text-gray-800">{selectedCustomer.address}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 font-bold block text-[10px] uppercase">City</span>
+                <span className="font-semibold text-gray-800">{selectedCustomer.city}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 font-bold block text-[10px] uppercase">Account Registered</span>
+                <span className="font-semibold text-gray-800">{selectedCustomer.createdAt}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl"
+              >
+                Close
+              </button>
             </div>
           </div>
         </Modal>

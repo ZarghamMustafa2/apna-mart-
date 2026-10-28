@@ -4,6 +4,8 @@ import { Product } from '../types/product';
 import { mockProducts } from '../data/mockProducts';
 import { dbGetAll, dbGetById, dbPut } from './db';
 import { adjustProductStock } from './inventoryService';
+import { isSupabaseConfigured } from './supabase';
+import { fetchOrdersFromSupabase, saveOrderToSupabase } from './supabaseDb';
 
 export const DEFAULT_PRODUCT_PLACEHOLDER =
   'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80';
@@ -48,6 +50,20 @@ export function resolveOrderItemImage(
 }
 
 export async function getOrders(): Promise<Order[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const cloudOrders = await fetchOrdersFromSupabase();
+      if (cloudOrders && cloudOrders.length > 0) {
+        for (const ord of cloudOrders) {
+          dbPut('orders', ord).catch(() => {});
+        }
+        return cloudOrders;
+      }
+    } catch (e) {
+      console.warn('Supabase getOrders fallback to local db:', e);
+    }
+  }
+
   const dbOrders = await dbGetAll<Order>('orders');
   if (dbOrders && dbOrders.length > 0) {
     return dbOrders;
@@ -128,7 +144,6 @@ export async function getOrders(): Promise<Order[]> {
         {
           id: 'item-demo-3',
           product: mockProducts[2],
-          // Notice: image is intentionally omitted here to test backward compatibility with older orders!
           unitPrice: mockProducts[2].salePrice || mockProducts[2].regularPrice,
           quantity: 1,
         },
@@ -247,7 +262,16 @@ export async function createDatabaseOrder(
     );
   }
 
-  // Save Order to DB
+  // Save Order to Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      await saveOrderToSupabase(newOrder);
+    } catch (e) {
+      console.error('Supabase createOrder error:', e);
+    }
+  }
+
+  // Save Order to local DB
   await dbPut<Order>('orders', newOrder);
   return newOrder;
 }
@@ -294,6 +318,15 @@ export async function updateDatabaseOrderStatus(
       },
     ],
   };
+
+  // Save to Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      await saveOrderToSupabase(updatedOrder);
+    } catch (e) {
+      console.error('Supabase updateOrderStatus error:', e);
+    }
+  }
 
   await dbPut<Order>('orders', updatedOrder);
   return updatedOrder;

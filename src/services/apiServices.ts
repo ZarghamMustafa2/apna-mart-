@@ -9,3 +9,7 @@ export * from './couponService';
 export * from './cmsService';
 export * from './settingsService';
 export * from './reviewService';
+export * from './supabase';
+export * from './supabaseStorage';
+export * from './supabaseDb';
+export * from './cloudSync';

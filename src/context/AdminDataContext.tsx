@@ -35,6 +35,10 @@ import {
   defaultHomepageSections,
   getStoreSettings,
   saveStoreSettings,
+  isSupabaseConfigured,
+  supabase,
+  syncLocalDataToCloud,
+  testSupabaseConnection,
 } from '../services/apiServices';
 
 interface AdminDataContextType {
@@ -70,6 +74,9 @@ interface AdminDataContextType {
   settings: StoreSettings;
   updateSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
   isDbLoaded: boolean;
+  isCloudConnected: boolean;
+  syncToCloud: () => Promise<{ success: boolean; message: string; count: number }>;
+  checkCloudConnection: () => Promise<{ success: boolean; message: string }>;
 }
 
 const defaultSettings: StoreSettings = {
@@ -119,6 +126,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [homepageSections, setHomepageSections] = useState<HomepageSections>(defaultHomepageSections);
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
+  const [isCloudConnected, setIsCloudConnected] = useState(isSupabaseConfigured());
 
   const refreshDatabaseData = async (shouldBroadcast: boolean = false) => {
     try {
@@ -156,17 +164,44 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     refreshDatabaseData();
 
+    // 1. Same-device cross-tab BroadcastChannel
+    let broadcastChannel: BroadcastChannel | null = null;
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const channel = new BroadcastChannel('apnamart_db_sync');
-      channel.onmessage = (event) => {
+      broadcastChannel = new BroadcastChannel('apnamart_db_sync');
+      broadcastChannel.onmessage = (event) => {
         if (event?.data?.type === 'APNAMART_SYNC') {
           refreshDatabaseData(false);
         }
       };
-      return () => {
-        channel.close();
-      };
     }
+
+    // 2. Global cross-device Supabase Realtime WebSocket subscription
+    let realtimeChannel: any = null;
+    if (isSupabaseConfigured() && supabase.client) {
+      setIsCloudConnected(true);
+      try {
+        realtimeChannel = supabase.client
+          .channel('apnamart_global_sync')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public' },
+            (payload) => {
+              console.log('[Supabase Realtime Sync]', payload.table, payload.eventType);
+              refreshDatabaseData(false);
+            }
+          )
+          .subscribe((status) => {
+            setIsCloudConnected(status === 'SUBSCRIBED');
+          });
+      } catch (err) {
+        console.warn('Realtime subscription error:', err);
+      }
+    }
+
+    return () => {
+      broadcastChannel?.close();
+      realtimeChannel?.unsubscribe();
+    };
   }, []);
 
   // Products
@@ -297,6 +332,20 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await refreshDatabaseData(true);
   };
 
+  const syncToCloud = async () => {
+    const res = await syncLocalDataToCloud();
+    if (res.success) {
+      await refreshDatabaseData(true);
+    }
+    return res;
+  };
+
+  const checkCloudConnection = async () => {
+    const res = await testSupabaseConnection();
+    setIsCloudConnected(res.success);
+    return res;
+  };
+
   return (
     <AdminDataContext.Provider
       value={{
@@ -326,6 +375,9 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         settings,
         updateSettings,
         isDbLoaded,
+        isCloudConnected,
+        syncToCloud,
+        checkCloudConnection,
       }}
     >
       {children}

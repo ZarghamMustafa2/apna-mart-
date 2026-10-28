@@ -5,6 +5,7 @@ import { getOrders, createDatabaseOrder, trackOrderLive, getOrderById as getDbOr
 import { useAdminData, broadcastSync } from './AdminDataContext';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
+import { isSupabaseConfigured, supabase } from '../services/apiServices';
 
 interface OrderContextType {
   orders: Order[];
@@ -42,17 +43,41 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       refreshOrders();
     }
 
+    // 1. Same-device cross-tab BroadcastChannel
+    let broadcastChannel: BroadcastChannel | null = null;
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const channel = new BroadcastChannel('apnamart_db_sync');
-      channel.onmessage = (event) => {
+      broadcastChannel = new BroadcastChannel('apnamart_db_sync');
+      broadcastChannel.onmessage = (event) => {
         if (event?.data?.type === 'APNAMART_SYNC') {
           refreshOrders();
         }
       };
-      return () => {
-        channel.close();
-      };
     }
+
+    // 2. Global cross-device Supabase Realtime WebSocket subscription
+    let realtimeOrders: any = null;
+    if (isSupabaseConfigured() && supabase.client) {
+      try {
+        realtimeOrders = supabase.client
+          .channel('apnamart_orders_realtime')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            () => {
+              console.log('[Supabase Realtime] Order created or updated');
+              refreshOrders();
+            }
+          )
+          .subscribe();
+      } catch (err) {
+        console.warn('Realtime orders subscription error:', err);
+      }
+    }
+
+    return () => {
+      broadcastChannel?.close();
+      realtimeOrders?.unsubscribe();
+    };
   }, [isDbLoaded]);
 
   const createOrder = async (

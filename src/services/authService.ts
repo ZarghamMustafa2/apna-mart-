@@ -3,6 +3,8 @@ import { CustomerUser } from '../types/user';
 import { ShippingAddress } from '../types/order';
 import { dbGetAll, dbGetById, dbPut } from './db';
 import { verifyPassword, hashPassword, generateSalt } from './crypto';
+import { isSupabaseConfigured } from './supabase';
+import { saveCustomerToSupabase } from './supabaseDb';
 
 export const DEMO_CUSTOMER_EMAIL = 'farhan.ali@example.com';
 export const DEMO_CUSTOMER_PASS = 'customer123';
@@ -58,23 +60,23 @@ export async function getOrCreateDemoCustomer(): Promise<CustomerUser> {
     savedAddresses: [
       {
         id: 'addr-1',
-        label: 'Home',
         fullName: 'Farhan Ali',
         phone: '+92 300 1234567',
         email: DEMO_CUSTOMER_EMAIL,
         city: 'Lahore',
         area: 'Gulberg III',
         address: 'House # 42, Block B, Main Boulevard',
+        isDefault: true,
       },
       {
         id: 'addr-2',
-        label: 'Office',
-        fullName: 'Farhan Ali',
-        phone: '+92 300 9876543',
-        email: 'farhan.work@example.com',
+        fullName: 'Farhan Ali (Office)',
+        phone: '+92 321 9876543',
+        email: DEMO_CUSTOMER_EMAIL,
         city: 'Lahore',
         area: 'DHA Phase 5',
-        address: 'Commercial Plaza 14, 2nd Floor',
+        address: 'Plaza 18, Commercial Broadway',
+        isDefault: false,
       },
     ],
     createdAt: '2026-01-15',
@@ -87,7 +89,7 @@ export async function getOrCreateDemoCustomer(): Promise<CustomerUser> {
 }
 
 /**
- * Authenticate customer with email and password from IndexedDB
+ * Authenticate customer with salted SHA-256 hash
  */
 export async function authenticateCustomer(
   email: string,
@@ -97,14 +99,10 @@ export async function authenticateCustomer(
     const cleanEmail = email.trim().toLowerCase();
     const cleanPass = pass.trim();
 
-    if (!cleanEmail || !cleanPass) {
-      return { success: false, error: 'Email and password are required.' };
-    }
-
     const users = await dbGetAll<any>('users');
     let found = users.find((u) => u.email && u.email.toLowerCase() === cleanEmail && !u.role);
 
-    // Support demo customer fallback
+    // If demo customer was requested but not in DB yet
     if (!found && cleanEmail === DEMO_CUSTOMER_EMAIL.toLowerCase()) {
       await getOrCreateDemoCustomer();
       const refreshedUsers = await dbGetAll<any>('users');
@@ -187,6 +185,16 @@ export async function registerCustomer(
       salt,
     };
 
+    if (isSupabaseConfigured()) {
+      saveCustomerToSupabase({
+        id: newUser.id,
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        created_at: newUser.createdAt,
+      }).catch((e) => console.warn('Supabase customer save error:', e));
+    }
+
     await dbPut('users', newUser);
     return { success: true, user: sanitizeCustomer(newUser) };
   } catch (err) {
@@ -243,6 +251,19 @@ export async function updateCustomerProfile(
       passwordHash: user.passwordHash, // Preserve credentials
       salt: user.salt,
     };
+
+    if (isSupabaseConfigured()) {
+      saveCustomerToSupabase({
+        id: user.id,
+        name: updated.name,
+        email: updated.email,
+        phone: updated.phone,
+        avatar: updated.avatar,
+        city: updated.city,
+        default_address: updated.defaultAddress,
+        addresses: updated.savedAddresses,
+      }).catch((e) => console.warn('Supabase customer update error:', e));
+    }
 
     await dbPut('users', updated);
     return sanitizeCustomer(updated);

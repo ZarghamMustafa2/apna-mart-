@@ -3,13 +3,43 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { StoreSettings } from '../../types/settings';
 import { ImageUploader } from '../../components/common/ImageUploader';
 import { ApnaMartLogo } from '../../components/common/ApnaMartLogo';
-import { Settings, Save, Check, Shield, Globe, CreditCard, Truck, Palette, Sparkles, Loader2 } from 'lucide-react';
+import {
+  Settings,
+  Save,
+  Check,
+  Shield,
+  Globe,
+  CreditCard,
+  Truck,
+  Palette,
+  Sparkles,
+  Loader2,
+  Database,
+  Cloud,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  ArrowUpRight,
+} from 'lucide-react';
+import {
+  getSupabaseCredentials,
+  saveSupabaseCredentials,
+  isSupabaseConfigured,
+} from '../../services/supabase';
 
 export const AdminSettingsPage: React.FC = () => {
-  const { settings, updateSettings } = useAdminData();
+  const { settings, updateSettings, isCloudConnected, syncToCloud, checkCloudConnection } = useAdminData();
   const [formData, setFormData] = useState<StoreSettings>(settings);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Cloud database credentials state
+  const initialCreds = getSupabaseCredentials();
+  const [supabaseUrl, setSupabaseUrl] = useState(initialCreds.url);
+  const [supabaseKey, setSupabaseKey] = useState(initialCreds.key);
+  const [cloudStatusMsg, setCloudStatusMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [isTestingCloud, setIsTestingCloud] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -32,6 +62,46 @@ export const AdminSettingsPage: React.FC = () => {
       console.error('Settings update error:', err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveCloudCredentials = () => {
+    saveSupabaseCredentials(supabaseUrl, supabaseKey);
+    setCloudStatusMsg({ text: 'Cloud credentials saved! Re-testing connection...', type: 'info' });
+    handleTestCloud();
+  };
+
+  const handleTestCloud = async () => {
+    setIsTestingCloud(true);
+    saveSupabaseCredentials(supabaseUrl, supabaseKey);
+    try {
+      const res = await checkCloudConnection();
+      if (res.success) {
+        setCloudStatusMsg({ text: res.message, type: 'success' });
+      } else {
+        setCloudStatusMsg({ text: res.message, type: 'error' });
+      }
+    } finally {
+      setIsTestingCloud(false);
+    }
+  };
+
+  const handleSyncToCloud = async () => {
+    if (!isSupabaseConfigured()) {
+      setCloudStatusMsg({ text: 'Please configure valid Supabase credentials first.', type: 'error' });
+      return;
+    }
+    setIsSyncingCloud(true);
+    setCloudStatusMsg({ text: 'Uploading local records to cloud database...', type: 'info' });
+    try {
+      const res = await syncToCloud();
+      if (res.success) {
+        setCloudStatusMsg({ text: res.message, type: 'success' });
+      } else {
+        setCloudStatusMsg({ text: res.message, type: 'error' });
+      }
+    } finally {
+      setIsSyncingCloud(false);
     }
   };
 
@@ -62,6 +132,99 @@ export const AdminSettingsPage: React.FC = () => {
           <span>Store configuration updated successfully! Changes reflect immediately across ApnaMart.</span>
         </div>
       )}
+
+      {/* CLOUD DATABASE & REALTIME SYNCHRONIZATION CARD */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-700/60 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700/80 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black tracking-tight text-white">Centralized Cloud Database & Realtime Sync</h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 ${isCloudConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCloudConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                  {isCloudConnected ? 'Cloud Realtime Connected' : 'Local Offline Mode'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Powers real-time bi-directional synchronization between Admin Panel and Customer Website across different devices.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleTestCloud}
+              disabled={isTestingCloud}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isTestingCloud ? 'animate-spin' : ''}`} />
+              <span>Test Connection</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSyncToCloud}
+              disabled={isSyncingCloud}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-xs font-extrabold rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+            >
+              {isSyncingCloud ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Cloud className="w-3.5 h-3.5" />}
+              <span>Sync Local Data to Cloud</span>
+            </button>
+          </div>
+        </div>
+
+        {cloudStatusMsg && (
+          <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2.5 border ${cloudStatusMsg.type === 'success' ? 'bg-emerald-950/60 border-emerald-700/60 text-emerald-200' : cloudStatusMsg.type === 'error' ? 'bg-red-950/60 border-red-700/60 text-red-200' : 'bg-blue-950/60 border-blue-700/60 text-blue-200'}`}>
+            {cloudStatusMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+            <span>{cloudStatusMsg.text}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+              Supabase Project URL
+            </label>
+            <input
+              type="text"
+              placeholder="https://your-project-id.supabase.co"
+              value={supabaseUrl}
+              onChange={(e) => setSupabaseUrl(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 font-mono focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-1.5">
+              Supabase Anon Public API Key
+            </label>
+            <input
+              type="password"
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              value={supabaseKey}
+              onChange={(e) => setSupabaseKey(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-950/70 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 font-mono focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span>Schema file available at:</span>
+            <code className="px-2 py-0.5 rounded bg-slate-950 text-emerald-400 font-mono text-[11px]">supabase/schema.sql</code>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveCloudCredentials}
+            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto"
+          >
+            Save & Connect Cloud
+          </button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Brand & Visual Identity */}

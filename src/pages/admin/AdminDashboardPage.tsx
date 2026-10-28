@@ -13,10 +13,11 @@ import {
   Settings,
   ArrowRight,
   TrendingUp,
+  Database,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { adminOrders, products } = useAdminData();
+  const { adminOrders, products, isCloudConnected } = useAdminData();
 
   // 1. Calculate the 4 Main Statistics
   const totalProducts = products.length;
@@ -33,10 +34,16 @@ export const AdminDashboardPage: React.FC = () => {
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-2 max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
-            <TrendingUp className="w-3.5 h-3.5 text-brand-400" />
-            Store Overview & Control
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+              <TrendingUp className="w-3.5 h-3.5 text-brand-400" />
+              Store Overview & Control
+            </span>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${isCloudConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
+              <span className={`w-2 h-2 rounded-full ${isCloudConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+              {isCloudConnected ? 'Cloud Realtime Synced' : 'Offline Local Storage'}
+            </span>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
             Welcome to ApnaMart Store Manager
           </h1>
@@ -180,7 +187,7 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
               <div>
                 <span className="block font-extrabold text-sm sm:text-base">Store Settings</span>
-                <span className="text-xs text-slate-300 font-medium">Logo, shipping, phone</span>
+                <span className="text-xs text-slate-300 font-medium">Cloud DB, logo, shipping</span>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform" />
