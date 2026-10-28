@@ -4,7 +4,7 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { StatusBadge } from '../../components/admin/common/StatusBadge';
 import { ConfirmModal } from '../../components/admin/common/ConfirmModal';
-import { Plus, Search, Edit3, Copy, Trash2, Eye, EyeOff, Star, Filter, RotateCcw } from 'lucide-react';
+import { Plus, Search, Edit3, Copy, Trash2, Eye, EyeOff, Filter, RotateCcw } from 'lucide-react';
 import { Product } from '../../types/product';
 
 export const AdminProductsPage: React.FC = () => {
@@ -17,12 +17,19 @@ export const AdminProductsPage: React.FC = () => {
   const [selectedStockStatus, setSelectedStockStatus] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const canViewPurchaseCost = hasPermission('view_purchase_cost');
+  const canManageProducts = hasPermission('manage_products');
 
   const filtered = products.filter((p) => {
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.sku.toLowerCase().includes(search.toLowerCase())) {
-      return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchName = p.name.toLowerCase().includes(q);
+      const matchSku = p.sku.toLowerCase().includes(q);
+      const matchBrand = p.brand?.toLowerCase().includes(q);
+      const matchCat = p.category?.toLowerCase().includes(q);
+      if (!matchName && !matchSku && !matchBrand && !matchCat) return false;
     }
     if (selectedCategory && p.categoryId !== selectedCategory) return false;
     if (selectedStockStatus === 'instock' && p.stock <= 0) return false;
@@ -44,9 +51,12 @@ export const AdminProductsPage: React.FC = () => {
     );
   };
 
-  const handleBulkDelete = () => {
-    selectedProducts.forEach((id) => deleteProduct(id));
+  const handleConfirmBulkDelete = () => {
+    if (canManageProducts) {
+      selectedProducts.forEach((id) => deleteProduct(id));
+    }
     setSelectedProducts([]);
+    setShowBulkDeleteModal(false);
   };
 
   return (
@@ -77,7 +87,7 @@ export const AdminProductsPage: React.FC = () => {
         <div className="relative flex-1 w-full max-w-md">
           <input
             type="text"
-            placeholder="Search products by title, SKU..."
+            placeholder="Search products by title, SKU, brand..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:border-brand-500"
@@ -111,9 +121,9 @@ export const AdminProductsPage: React.FC = () => {
           </select>
 
           {/* Bulk Action Button */}
-          {selectedProducts.length > 0 && (
+          {selectedProducts.length > 0 && canManageProducts && (
             <button
-              onClick={handleBulkDelete}
+              onClick={() => setShowBulkDeleteModal(true)}
               className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -151,7 +161,6 @@ export const AdminProductsPage: React.FC = () => {
             <tbody className="divide-y divide-gray-100 font-semibold text-gray-800">
               {filtered.map((prod) => {
                 const isSelected = selectedProducts.includes(prod.id);
-                // Simulated confidential purchase cost (e.g. 60% of regular price)
                 const mockPurchaseCost = Math.round(prod.regularPrice * 0.65);
 
                 return (
@@ -228,29 +237,35 @@ export const AdminProductsPage: React.FC = () => {
                         >
                           <Edit3 className="w-4 h-4" />
                         </Link>
-                        <button
-                          onClick={() => duplicateProduct(prod.id)}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          title="Duplicate Product"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => toggleProductStatus(prod.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            prod.isHidden ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
-                          }`}
-                          title={prod.isHidden ? 'Product is Hidden — Click to make Visible' : 'Product is Visible — Click to Hide'}
-                        >
-                          {prod.isHidden ? <EyeOff className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
-                        </button>
-                        <button
-                          onClick={() => setDeleteTargetId(prod.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete Product"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canManageProducts && (
+                          <button
+                            onClick={() => duplicateProduct(prod.id)}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Duplicate Product"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canManageProducts && (
+                          <button
+                            onClick={() => toggleProductStatus(prod.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              prod.isHidden ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                            title={prod.isHidden ? 'Product is Hidden — Click to make Visible' : 'Product is Visible — Click to Hide'}
+                          >
+                            {prod.isHidden ? <EyeOff className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-emerald-600" />}
+                          </button>
+                        )}
+                        {canManageProducts && (
+                          <button
+                            onClick={() => setDeleteTargetId(prod.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -261,14 +276,32 @@ export const AdminProductsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Single Delete Confirmation Dialog */}
       {deleteTargetId && (
         <ConfirmModal
           isOpen={!!deleteTargetId}
           onClose={() => setDeleteTargetId(null)}
-          onConfirm={() => deleteProduct(deleteTargetId)}
+          onConfirm={() => {
+            if (canManageProducts) {
+              deleteProduct(deleteTargetId);
+            }
+            setDeleteTargetId(null);
+          }}
           title="Delete Product"
-          message="Are you sure you want to permanently remove this product from the catalog?"
+          message="Are you sure you want to permanently delete this product?"
+          confirmText="Yes, Permanently Delete"
+        />
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {showBulkDeleteModal && (
+        <ConfirmModal
+          isOpen={showBulkDeleteModal}
+          onClose={() => setShowBulkDeleteModal(false)}
+          onConfirm={handleConfirmBulkDelete}
+          title="Delete Selected Products"
+          message={`Are you sure you want to permanently delete these ${selectedProducts.length} selected products?`}
+          confirmText="Yes, Permanently Delete All"
         />
       )}
     </div>

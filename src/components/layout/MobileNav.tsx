@@ -13,6 +13,7 @@ import {
   Phone,
   HelpCircle,
   Package,
+  ArrowRight,
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -21,7 +22,9 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { ApnaMartLogo } from '../common/ApnaMartLogo';
 import { UserAvatar } from '../common/UserAvatar';
 import { mockCategories } from '../../data/mockCategories';
+import { mockProducts } from '../../data/mockProducts';
 import { useFilters } from '../../context/FilterContext';
+import { searchProducts } from '../../utils/searchUtils';
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -34,9 +37,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   const { cartCount, setIsCartOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const { user, isLoggedIn } = useAuth();
-  const { settings } = useAdminData();
+  const { settings, products, categories } = useAdminData();
   const { setSearchQuery } = useFilters();
   const navigate = useNavigate();
+
+  const productList = products && products.length > 0 ? products : mockProducts;
+  const categoriesList = categories && categories.length > 0 ? categories : mockCategories;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +56,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
   const toggleCategoryExpand = (catId: string) => {
     setExpandedCat(expandedCat === catId ? null : catId);
   };
+
+  const mobileSuggestions = mobileSearch.trim()
+    ? searchProducts(productList, mobileSearch).slice(0, 5)
+    : [];
 
   return (
     <>
@@ -81,13 +91,60 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                 <form onSubmit={handleSearchSubmit} className="relative">
                   <input
                     type="text"
-                    placeholder="Search product, category..."
+                    placeholder="Search product, category, brand..."
                     value={mobileSearch}
                     onChange={(e) => setMobileSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-brand-500 focus:outline-none"
+                    className="w-full pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:border-brand-500 focus:outline-none"
                   />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  {mobileSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setMobileSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </form>
+
+                {/* Live Mobile Search Autocomplete Dropdown */}
+                {mobileSuggestions.length > 0 && (
+                  <div className="mt-2 bg-white rounded-xl shadow-lg border border-gray-100 p-2 space-y-1">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-0.5">
+                      Suggestions
+                    </div>
+                    {mobileSuggestions.map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/product/${p.slug}`}
+                        onClick={onClose}
+                        className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-gray-50 transition-all"
+                      >
+                        <img
+                          src={p.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=150&q=80'}
+                          alt={p.name}
+                          className="w-8 h-8 rounded-lg object-cover bg-gray-100 flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-gray-900 truncate">
+                            {p.name}
+                          </div>
+                          <div className="text-[10px] text-brand-600 font-bold">
+                            Rs. {(p.salePrice || p.regularPrice).toLocaleString()}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="w-full py-1.5 text-center text-xs font-bold text-brand-600 hover:underline flex items-center justify-center gap-1"
+                    >
+                      <span>See all results</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Navigation Links & Accordion */}
@@ -115,7 +172,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                   <div className="text-xs font-bold uppercase tracking-wider text-gray-400 px-3 mb-2">
                     Categories
                   </div>
-                  {mockCategories.map((cat) => {
+                  {categoriesList.map((cat) => {
                     const isExpanded = expandedCat === cat.id;
                     return (
                       <div key={cat.id} className="mb-1">
@@ -140,7 +197,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ isOpen, onClose }) => {
                             >
                               All in {cat.name} →
                             </Link>
-                            {cat.subcategories.map((sub) => (
+                            {cat.subcategories?.map((sub) => (
                               <Link
                                 key={sub.id}
                                 to={`/shop?category=${cat.slug}&subcategory=${sub.slug}`}

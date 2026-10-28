@@ -8,8 +8,9 @@ import { ProductCard } from '../components/common/ProductCard';
 import { useFilters } from '../context/FilterContext';
 import { useAdminData } from '../context/AdminDataContext';
 import { mockProducts } from '../data/mockProducts';
-import { Filter, SearchX, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Filter, SearchX, RotateCcw, ChevronLeft, ChevronRight, X, Search } from 'lucide-react';
 import { SEOHead } from '../components/common/SEOHead';
+import { searchProducts } from '../utils/searchUtils';
 
 export const ShopPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -38,8 +39,13 @@ export const ShopPage: React.FC = () => {
     setCurrentPage(1);
   }, [filters, filterParam]);
 
-  // Apply filters to product catalog
-  let filtered = productList.filter((product) => {
+  // 1. Initial Candidate Pool: if search active, rank by search relevance, else start with all
+  let baseCandidates = filters.searchQuery
+    ? searchProducts(productList, filters.searchQuery)
+    : productList.filter((p) => !p.isHidden);
+
+  // 2. Apply Faceted Filters
+  let filtered = baseCandidates.filter((product) => {
     // Exclude hidden products
     if (product.isHidden) {
       return false;
@@ -57,16 +63,6 @@ export const ShopPage: React.FC = () => {
     }
     if (filterParam === 'sale' && (!product.salePrice || product.salePrice >= product.regularPrice)) {
       return false;
-    }
-
-    // Search query
-    if (filters.searchQuery) {
-      const q = filters.searchQuery.toLowerCase();
-      const matchName = product.name.toLowerCase().includes(q);
-      const matchBrand = product.brand.toLowerCase().includes(q);
-      const matchCategory = product.category.toLowerCase().includes(q);
-      const matchSKU = product.sku.toLowerCase().includes(q);
-      if (!matchName && !matchBrand && !matchCategory && !matchSKU) return false;
     }
 
     // Category
@@ -91,7 +87,7 @@ export const ShopPage: React.FC = () => {
     }
 
     // In Stock Only
-    if (filters.inStockOnly && !product.inStock) {
+    if (filters.inStockOnly && (!product.inStock || product.stock <= 0)) {
       return false;
     }
 
@@ -119,18 +115,20 @@ export const ShopPage: React.FC = () => {
     return true;
   });
 
-  // Apply sorting
-  filtered.sort((a, b) => {
-    const priceA = a.salePrice || a.regularPrice;
-    const priceB = b.salePrice || b.regularPrice;
+  // 3. Apply sorting (If user has a specific sort chosen, or if not searching)
+  if (filters.sortBy !== 'newest' || !filters.searchQuery) {
+    filtered.sort((a, b) => {
+      const priceA = a.salePrice || a.regularPrice;
+      const priceB = b.salePrice || b.regularPrice;
 
-    if (filters.sortBy === 'price-low-high') return priceA - priceB;
-    if (filters.sortBy === 'price-high-low') return priceB - priceA;
-    if (filters.sortBy === 'highest-rated') return b.rating - a.rating;
-    if (filters.sortBy === 'best-selling') return b.reviewCount - a.reviewCount;
-    if (filters.sortBy === 'most-popular') return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // newest
-  });
+      if (filters.sortBy === 'price-low-high') return priceA - priceB;
+      if (filters.sortBy === 'price-high-low') return priceB - priceA;
+      if (filters.sortBy === 'highest-rated') return b.rating - a.rating;
+      if (filters.sortBy === 'best-selling') return b.reviewCount - a.reviewCount;
+      if (filters.sortBy === 'most-popular') return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // newest
+    });
+  }
 
   // Pagination calculation
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -138,6 +136,7 @@ export const ShopPage: React.FC = () => {
   const paginatedProducts = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   const getPageTitle = () => {
+    if (filters.searchQuery) return `Search: "${filters.searchQuery}"`;
     if (filterParam === 'featured') return 'Featured Products';
     if (filterParam === 'new') return 'New Arrivals';
     if (filterParam === 'bestseller') return 'Best Sellers Catalog';
@@ -146,12 +145,14 @@ export const ShopPage: React.FC = () => {
     return 'All Products Catalog';
   };
 
+  const popularKeywords = ['Smartphones', 'Headphones', 'Shoes', 'Watches', 'Earbuds', 'Fashion'];
+
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-20 sm:pb-24 lg:pb-8">
       <SEOHead title={`${getPageTitle()} | ApnaMart`} canonicalUrl="https://apnamart.space/shop" />
       <Breadcrumb items={[{ label: 'Shop Catalog' }]} />
 
-      {/* Header Bar - Compact on mobile */}
+      {/* Header Bar */}
       <div className="flex items-center justify-between gap-2 py-2 sm:py-4 border-b border-gray-100 dark:border-slate-800 my-1">
         <div className="min-w-0">
           <h1 className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight truncate">
@@ -177,6 +178,23 @@ export const ShopPage: React.FC = () => {
           <SortDropdown />
         </div>
       </div>
+
+      {/* Active Search Notification Banner */}
+      {filters.searchQuery && (
+        <div className="flex items-center justify-between gap-2 p-3 bg-brand-50/70 border border-brand-100 rounded-2xl my-3 text-xs">
+          <div className="flex items-center gap-2 text-brand-900 font-semibold truncate">
+            <Search className="w-4 h-4 text-brand-600 flex-shrink-0" />
+            <span>Search results for: <strong className="font-extrabold">"{filters.searchQuery}"</strong> ({filtered.length} found)</span>
+          </div>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="px-2.5 py-1 bg-white hover:bg-brand-100 text-brand-700 font-bold rounded-lg border border-brand-200 transition-colors flex items-center gap-1 flex-shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Clear Search</span>
+          </button>
+        </div>
+      )}
 
       {/* Active Filters Bar */}
       <ActiveFilters />
@@ -248,22 +266,48 @@ export const ShopPage: React.FC = () => {
               )}
             </>
           ) : (
-            /* Empty State */
-            <div className="py-16 px-4 text-center bg-white rounded-3xl border border-gray-100 p-8 space-y-4 max-w-md mx-auto">
+            /* Comprehensive Empty State */
+            <div className="py-16 px-4 text-center bg-white rounded-3xl border border-gray-100 p-8 space-y-5 max-w-lg mx-auto">
               <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
                 <SearchX className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-extrabold text-gray-900">No Products Found</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                We couldn't find any products matching your current search or filter criteria. Try resetting filters or searching with different keywords.
-              </p>
-              <button
-                onClick={resetFilters}
-                className="px-6 py-3 bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Clear All Filters
-              </button>
+              <div>
+                <h3 className="text-xl font-extrabold text-gray-900">No Matching Products Found</h3>
+                <p className="text-xs text-gray-500 leading-relaxed mt-1">
+                  {filters.searchQuery
+                    ? `We couldn't find any results matching "${filters.searchQuery}". Check your spelling or try different keywords.`
+                    : "We couldn't find any products matching your current filter criteria."}
+                </p>
+              </div>
+
+              {/* Popular Search Suggestions */}
+              <div className="pt-2">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                  Try searching for:
+                </span>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {popularKeywords.map((kw) => (
+                    <button
+                      key={kw}
+                      type="button"
+                      onClick={() => setSearchQuery(kw)}
+                      className="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-brand-50 hover:text-brand-600 text-gray-700 text-xs font-semibold transition-colors"
+                    >
+                      {kw}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3">
+                <button
+                  onClick={resetFilters}
+                  className="px-6 py-3 bg-brand-600 text-white font-extrabold text-xs rounded-xl shadow-md inline-flex items-center gap-2 hover:bg-brand-700 transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Clear All Filters & Search
+                </button>
+              </div>
             </div>
           )}
         </div>

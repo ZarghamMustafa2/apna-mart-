@@ -141,13 +141,13 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const secs = await getHomepageSections();
       const setts = await getStoreSettings();
 
-      if (prods && prods.length > 0) setProducts(prods);
-      if (cats && cats.length > 0) setCategories(cats);
+      if (prods !== undefined && prods !== null) setProducts(prods);
+      if (cats !== undefined && cats !== null) setCategories(cats);
       if (logs) setStockMovements(logs);
       if (ords) setAdminOrders(ords);
-      if (cpns && cpns.length > 0) setCoupons(cpns);
-      if (slides && slides.length > 0) setHeroSlides(slides);
-      if (banners && banners.length > 0) setPromoBanners(banners);
+      if (cpns !== undefined && cpns !== null) setCoupons(cpns);
+      if (slides !== undefined && slides !== null) setHeroSlides(slides);
+      if (banners !== undefined && banners !== null) setPromoBanners(banners);
       if (secs) setHomepageSections(secs);
       if (setts) setSettings(setts);
       setIsDbLoaded(true);

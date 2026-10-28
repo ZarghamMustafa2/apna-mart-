@@ -94,12 +94,27 @@ export function openDatabase(): Promise<IDBDatabase> {
   });
 }
 
+const SEED_FLAG_KEY = 'apnamart_db_initialized_v2';
+
 /**
  * Seed database with initial products, categories, coupons, banners, admin accounts if database is fresh.
+ * Strict protection: NEVER overwrites or re-seeds if the store has already been initialized.
  */
 async function seedInitialDatabaseData(db: IDBDatabase): Promise<void> {
+  const alreadySeeded = typeof window !== 'undefined' && localStorage.getItem(SEED_FLAG_KEY) === 'true';
   const count = await getStoreCount(db, 'products');
-  if (count > 0) return; // already seeded
+
+  // If already seeded previously or products exist, never overwrite or re-seed
+  if (alreadySeeded || count > 0) {
+    if (typeof window !== 'undefined' && !alreadySeeded && count > 0) {
+      localStorage.setItem(SEED_FLAG_KEY, 'true');
+    }
+    return;
+  }
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(SEED_FLAG_KEY, 'true');
+  }
 
   const transaction = db.transaction(
     ['products', 'categories', 'coupons', 'homepage_cms', 'users', 'settings'],

@@ -23,6 +23,7 @@ import { ApnaMartLogo } from '../common/ApnaMartLogo';
 import { UserAvatar } from '../common/UserAvatar';
 import { mockCategories } from '../../data/mockCategories';
 import { mockProducts } from '../../data/mockProducts';
+import { searchProducts } from '../../utils/searchUtils';
 
 interface HeaderProps {
   onOpenMobileMenu: () => void;
@@ -31,6 +32,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const [searchInput, setSearchInput] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -45,11 +47,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
   const categoriesList = categories && categories.length > 0 ? categories : mockCategories;
 
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   // Close search suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node) &&
+        mobileSearchRef.current &&
+        !mobileSearchRef.current.contains(event.target as Node)
+      ) {
         setIsSearchFocused(false);
       }
     };
@@ -62,19 +70,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
     if (searchInput.trim()) {
       setSearchQuery(searchInput.trim());
       setIsSearchFocused(false);
+      setIsMobileSearchOpen(false);
       navigate(`/shop?search=${encodeURIComponent(searchInput.trim())}`);
     }
   };
 
-  // Filtered live search suggestions
+  // High-performance intelligent multi-field search and ranking
   const suggestions = searchInput.trim()
-    ? productList.filter(
-        (p) =>
-          p.name.toLowerCase().includes(searchInput.toLowerCase()) ||
-          p.brand.toLowerCase().includes(searchInput.toLowerCase()) ||
-          p.category.toLowerCase().includes(searchInput.toLowerCase()) ||
-          p.sku.toLowerCase().includes(searchInput.toLowerCase())
-      ).slice(0, 5)
+    ? searchProducts(productList, searchInput).slice(0, 6)
     : [];
 
   return (
@@ -154,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </Link>
         </nav>
 
-        {/* Live Search Input Component */}
+        {/* Live Search Input Component (Desktop) */}
         <div ref={searchRef} className="relative flex-1 max-w-md hidden sm:block">
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
@@ -180,10 +183,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           {/* Search Autocomplete Suggestions Dropdown */}
           {isSearchFocused && suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-50">
-              <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-3 py-1 mb-1">
-                Product Suggestions
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider px-3 py-1 mb-1">
+                <span>Product Matches ({suggestions.length})</span>
+                <span className="text-[10px] text-brand-600 font-semibold">Ranked by relevance</span>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
                 {suggestions.map((product) => (
                   <Link
                     key={product.id}
@@ -197,10 +201,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                       className="w-10 h-10 object-cover rounded-lg bg-gray-100 flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-                        {product.brand}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider">
+                          {product.brand}
+                        </span>
+                        {(!product.inStock || product.stock <= 0) && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-red-100 text-red-600">
+                            Out of Stock
+                          </span>
+                        )}
                       </div>
-                      <div className="text-sm font-semibold text-gray-800 group-hover:text-brand-600 truncate">
+                      <div className="text-xs sm:text-sm font-semibold text-gray-800 group-hover:text-brand-600 truncate">
                         {product.name}
                       </div>
                     </div>
@@ -214,7 +225,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
                 onClick={handleSearchSubmit}
                 className="w-full mt-2 py-2 text-center text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-xl transition-all flex items-center justify-center gap-1"
               >
-                <span>View all results for "{searchInput}"</span>
+                <span>View all search results for "{searchInput}"</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -222,7 +233,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
         </div>
 
         {/* Right Header Action Icons */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
+          {/* Mobile Search Toggle Button */}
+          <button
+            onClick={() => {
+              setIsMobileSearchOpen(!isMobileSearchOpen);
+              setIsSearchFocused(true);
+            }}
+            className="sm:hidden p-1.5 rounded-xl text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Search Store"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
           {/* Light / Dark Mode Toggle */}
           <ThemeToggle />
 
@@ -322,6 +345,87 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu }) => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Expandable Search Bar */}
+      {isMobileSearchOpen && (
+        <div ref={mobileSearchRef} className="sm:hidden px-3 pb-3 pt-1 border-t border-gray-100 bg-white dark:bg-slate-900 animate-in slide-in-from-top-2 duration-150">
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search products, brands, categories..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              className="w-full pl-9 pr-9 py-2.5 bg-gray-100 border border-transparent rounded-xl text-xs font-medium focus:bg-white focus:border-brand-500 focus:outline-none"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            {searchInput ? (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsMobileSearchOpen(false)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </form>
+
+          {/* Mobile Search Suggestions Dropdown */}
+          {isSearchFocused && suggestions.length > 0 && (
+            <div className="mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 max-h-80 overflow-y-auto">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1 mb-1">
+                Top Matches ({suggestions.length})
+              </div>
+              <div className="divide-y divide-gray-50">
+                {suggestions.map((product) => (
+                  <Link
+                    key={product.id}
+                    to={`/product/${product.slug}`}
+                    onClick={() => {
+                      setIsSearchFocused(false);
+                      setIsMobileSearchOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-gray-50 transition-all"
+                  >
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-9 h-9 object-cover rounded-lg bg-gray-100 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-bold text-brand-600 uppercase">
+                        {product.brand}
+                      </div>
+                      <div className="text-xs font-semibold text-gray-800 truncate">
+                        {product.name}
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-gray-900 flex-shrink-0">
+                      Rs. {(product.salePrice || product.regularPrice).toLocaleString()}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <button
+                onClick={handleSearchSubmit}
+                className="w-full mt-2 py-2 text-center text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-xl transition-all flex items-center justify-center gap-1"
+              >
+                <span>View all results for "{searchInput}"</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };

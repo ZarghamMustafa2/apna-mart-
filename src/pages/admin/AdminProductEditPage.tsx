@@ -4,6 +4,7 @@ import { useAdminData } from '../../context/AdminDataContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { VariantManager } from '../../components/admin/products/VariantManager';
 import { MultiImageUploader } from '../../components/common/MultiImageUploader';
+import { ConfirmModal } from '../../components/admin/common/ConfirmModal';
 import { Product, ProductVariant, ProductBadge } from '../../types/product';
 import {
   ArrowLeft,
@@ -14,16 +15,20 @@ import {
   Sliders,
   Check,
   AlertCircle,
+  Trash2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const AdminProductEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
   const navigate = useNavigate();
-  const { products, addProduct, updateProduct, categories } = useAdminData();
+  const { products, addProduct, updateProduct, deleteProduct, categories } = useAdminData();
   const { hasPermission } = useAdminAuth();
 
   const canViewPurchaseCost = hasPermission('view_purchase_cost');
+  const canManageProducts = hasPermission('manage_products');
   const existing = isEditing ? products.find((p) => p.id === id) : undefined;
 
   // 1. PRIMARY EASY FIELDS (Initially visible)
@@ -34,6 +39,7 @@ export const AdminProductEditPage: React.FC = () => {
   const [stock, setStock] = useState<number>(existing?.stock ?? 10);
   const [desc, setDesc] = useState(existing?.description || '');
   const [images, setImages] = useState<string[]>(existing?.images || []);
+  const [isHidden, setIsHidden] = useState<boolean>(existing?.isHidden || false);
 
   // 2. ADVANCED OPTIONS (Collapsed by default)
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -48,8 +54,9 @@ export const AdminProductEditPage: React.FC = () => {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Sync state when existing product finishes loading from IndexedDB
+  // Sync state when existing product finishes loading from IndexedDB / cloud
   useEffect(() => {
     if (existing) {
       setName(existing.name || '');
@@ -59,6 +66,7 @@ export const AdminProductEditPage: React.FC = () => {
       setStock(existing.stock ?? 10);
       setDesc(existing.description || '');
       setImages(existing.images && existing.images.length > 0 ? existing.images : []);
+      setIsHidden(Boolean(existing.isHidden));
       setBrand(existing.brand || 'ApnaMart');
       setSku(existing.sku || '');
       setShortDesc(existing.shortDescription || '');
@@ -92,7 +100,7 @@ export const AdminProductEditPage: React.FC = () => {
       return;
     }
 
-    const selectedCategory = categories.find((c) => c.id === categoryId) || categories[0];
+    const selectedCategory = categories.find((c) => c.id === categoryId) || categories[0] || { id: 'cat-electronics', name: 'Electronics' };
 
     const finalImages =
       images.length > 0
@@ -119,6 +127,7 @@ export const AdminProductEditPage: React.FC = () => {
       videoUrl: videoUrl || undefined,
       hasVariants,
       variants: hasVariants ? variants : undefined,
+      isHidden: Boolean(isHidden),
       specifications: existing?.specifications || [
         {
           groupName: 'General Specs',
@@ -164,15 +173,17 @@ export const AdminProductEditPage: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSaving}
-          className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
-        >
-          <Save className="w-4 h-4" />
-          <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="px-8 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-105"
+          >
+            <Save className="w-4 h-4" />
+            <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+          </button>
+        </div>
       </div>
 
       {formError && (
@@ -182,10 +193,10 @@ export const AdminProductEditPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main Form Form Container */}
+      {/* Main Form Container */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ============================================================== */}
-        {/* 1. SIMPLE MAIN SECTION (The only fields shown initially)        */}
+        {/* 1. SIMPLE MAIN SECTION (The primary fields shown initially)    */}
         {/* ============================================================== */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-6">
           <div className="border-b border-gray-100 pb-3">
@@ -286,8 +297,46 @@ export const AdminProductEditPage: React.FC = () => {
               className="w-full sm:w-48 px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-brand-600 focus:bg-white focus:outline-none focus:border-brand-500"
             />
             <span className="text-[11px] text-gray-400 block mt-1">
-              How many units do you have in stock to sell?
+              How many units do you have in stock to sell? Zero stock will mark the item as Out of Stock.
             </span>
+          </div>
+
+          {/* Product Visibility Status (Active / Hidden) */}
+          <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider mb-0.5">
+                Store Visibility Status
+              </label>
+              <p className="text-xs text-gray-500">
+                Choose whether this product is active for customers to search and purchase.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsHidden(false)}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                  !isHidden
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Eye className="w-4 h-4" />
+                <span>Active (Visible in Store)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsHidden(true)}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                  isHidden
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <EyeOff className="w-4 h-4" />
+                <span>Inactive (Hidden)</span>
+              </button>
+            </div>
           </div>
 
           {/* 4. Product Images (Direct Upload) */}
@@ -362,55 +411,57 @@ export const AdminProductEditPage: React.FC = () => {
                   </label>
                   <input
                     type="text"
+                    placeholder="e.g. Samsung, Apple, Nike"
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    placeholder="e.g. ApnaMart, Samsung, Nike"
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                    SKU Code (Inventory Code)
+                    SKU Code (Stock Keeping Unit)
                   </label>
                   <input
                     type="text"
+                    placeholder="e.g. APNA-EL-4091"
                     value={sku}
                     onChange={(e) => setSku(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-mono font-bold"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-mono font-bold"
                   />
                 </div>
               </div>
 
-              {/* Short Description */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Short Tagline / Summary (1 line)
-                </label>
-                <input
-                  type="text"
-                  value={shortDesc}
-                  onChange={(e) => setShortDesc(e.target.value)}
-                  placeholder="e.g. High quality wireless earbuds with 40-hour battery life"
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold"
-                />
+              {/* Short Summary & Video */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Short Summary (1-2 sentences)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Brief 1-sentence highlight for search results and previews"
+                    value={shortDesc}
+                    onChange={(e) => setShortDesc(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                    Product Video URL (YouTube embed or MP4)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
               </div>
 
-              {/* Video URL */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Product Video URL (Optional YouTube Link)
-                </label>
-                <input
-                  type="url"
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold"
-                />
-              </div>
-
-              {/* Product Badges */}
+              {/* Badges */}
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                   Highlight Badges
@@ -422,15 +473,15 @@ export const AdminProductEditPage: React.FC = () => {
                       <button
                         type="button"
                         key={badge}
-                        onClick={() =>
-                          setBadges(
-                            isSelected ? badges.filter((b) => b !== badge) : [...badges, badge]
-                          )
-                        }
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        onClick={() => {
+                          setBadges((prev) =>
+                            isSelected ? prev.filter((b) => b !== badge) : [...prev, badge]
+                          );
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-brand-600 text-white shadow-sm'
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
+                            ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-brand-500'
                         }`}
                       >
                         {isSelected && <Check className="w-3.5 h-3.5" />}
@@ -442,11 +493,11 @@ export const AdminProductEditPage: React.FC = () => {
               </div>
 
               {/* Variants Section */}
-              <div className="pt-4 border-t border-gray-200 space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-200">
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
                   <div>
                     <span className="font-extrabold text-xs sm:text-sm text-gray-900 block">
-                      Enable Product Variants (Size, Color, Storage)
+                      Product Variants (Colors, Sizes, Models)
                     </span>
                     <span className="text-[11px] text-gray-500">
                       Enable if this item has multiple options (like Red / Blue, or Small / Medium / Large).
@@ -484,25 +535,55 @@ export const AdminProductEditPage: React.FC = () => {
           )}
         </div>
 
-        {/* Big Save Button at bottom */}
-        <div className="flex items-center justify-between pt-4">
-          <Link
-            to="/admin/products"
-            className="px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm transition-colors"
-          >
-            Cancel
-          </Link>
+        {/* Big Save & Delete Buttons at bottom */}
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 pt-4">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link
+              to="/admin/products"
+              className="px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm transition-colors text-center"
+            >
+              Cancel
+            </Link>
+
+            {isEditing && canManageProducts && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-5 py-3.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Product</span>
+              </button>
+            )}
+          </div>
 
           <button
             type="submit"
             disabled={isSaving}
-            className="px-10 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl flex items-center gap-2 transition-all hover:scale-105"
+            className="w-full sm:w-auto px-10 py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all hover:scale-105"
           >
             <Save className="w-5 h-5" />
             <span>{isSaving ? 'Saving Product...' : 'Save Product Now'}</span>
           </button>
         </div>
       </form>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={async () => {
+            if (id && canManageProducts) {
+              await deleteProduct(id);
+              navigate('/admin/products');
+            }
+          }}
+          title="Delete Product"
+          message="Are you sure you want to permanently delete this product?"
+          confirmText="Yes, Permanently Delete"
+        />
+      )}
     </div>
   );
 };

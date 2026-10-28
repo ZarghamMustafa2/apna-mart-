@@ -17,12 +17,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   const isWishlisted = isInWishlist(product.id);
-  const primaryImage = product.images[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80';
-  const secondaryImage = product.images[1] || primaryImage;
+  const isOutOfStock = !product.inStock || product.stock <= 0;
+  const primaryImage = product.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80';
+  const secondaryImage = product.images?.[1] || primaryImage;
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isOutOfStock) return;
     addToCart(product, 1);
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 1500);
@@ -46,20 +48,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
     >
       {/* Top Badges */}
       <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10 flex flex-col gap-1 pointer-events-none">
-        {product.salePrice && (
-          <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-red-500 text-white rounded-full shadow-xs">
-            -{discountPercentage}%
+        {isOutOfStock ? (
+          <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-red-600 text-white rounded-full shadow-xs">
+            Out of Stock
           </span>
-        )}
-        {product.badges.includes('New') && (
-          <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-emerald-500 text-white rounded-full shadow-xs">
-            New
-          </span>
-        )}
-        {product.badges.includes('Best Seller') && (
-          <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-amber-500 text-white rounded-full shadow-xs">
-            Best Seller
-          </span>
+        ) : (
+          <>
+            {product.salePrice && (
+              <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-red-500 text-white rounded-full shadow-xs">
+                -{discountPercentage}%
+              </span>
+            )}
+            {product.badges?.includes('New') && (
+              <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-emerald-500 text-white rounded-full shadow-xs">
+                New
+              </span>
+            )}
+            {product.badges?.includes('Best Seller') && (
+              <span className="px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[11px] font-extrabold bg-amber-500 text-white rounded-full shadow-xs">
+                Best Seller
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -81,7 +91,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
         <img
           src={isHovered ? secondaryImage : primaryImage}
           alt={product.name}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          className={`w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ${
+            isOutOfStock ? 'opacity-80 grayscale-[25%]' : ''
+          }`}
           loading="lazy"
           decoding="async"
         />
@@ -110,8 +122,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
             <span className="font-extrabold uppercase tracking-wider text-brand-600 dark:text-cyan-400 truncate max-w-[85px] sm:max-w-[120px]">
               {product.brand}
             </span>
-            <span className={product.inStock ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-red-500 font-bold'}>
-              {product.inStock ? 'In Stock' : 'Out'}
+            <span className={!isOutOfStock ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-red-500 font-bold'}>
+              {!isOutOfStock ? 'In Stock' : 'Out of Stock'}
             </span>
           </div>
 
@@ -127,10 +139,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
           <div className="mt-1 flex items-center gap-1 text-[11px] sm:text-xs">
             <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
             <span className="font-bold text-slate-800 dark:text-slate-200">
-              {product.rating.toFixed(1)}
+              {product.rating?.toFixed(1) || '5.0'}
             </span>
             <span className="text-[10px] text-gray-400">
-              ({product.reviewCount})
+              ({product.reviewCount || 0})
             </span>
           </div>
         </div>
@@ -150,21 +162,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }
 
           <button
             onClick={handleQuickAdd}
-            disabled={!product.inStock}
+            disabled={isOutOfStock}
             className={`shrink-0 py-1.5 px-2 sm:py-2 sm:px-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-extrabold transition-all duration-200 flex items-center gap-1 active:scale-95 ${
               addedAnimation
                 ? 'bg-emerald-600 text-white'
-                : product.inStock
+                : !isOutOfStock
                 ? 'bg-slate-900 dark:bg-cyan-500 text-white dark:text-slate-950 hover:bg-brand-600 dark:hover:bg-cyan-400 shadow-2xs'
                 : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-600 cursor-not-allowed'
             }`}
-            title="Add to Cart"
+            title={isOutOfStock ? 'Item is Out of Stock' : 'Add to Cart'}
           >
             {addedAnimation ? (
               <>
                 <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 <span className="hidden sm:inline">Added</span>
               </>
+            ) : isOutOfStock ? (
+              <span className="text-[9px] sm:text-[10px] font-bold">Out of Stock</span>
             ) : (
               <>
                 <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

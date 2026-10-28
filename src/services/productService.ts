@@ -8,10 +8,11 @@ import {
   saveProductToSupabase,
   deleteProductFromSupabase,
 } from './supabaseDb';
+import { searchProducts } from '../utils/searchUtils';
 
 /**
  * Product Service Layer
- * Customer APIs sanitize purchaseCost. Admin APIs maintain full records.
+ * Customer APIs sanitize purchaseCost and exclude hidden products. Admin APIs maintain full records.
  */
 
 export async function getAllProductsAdmin(): Promise<Product[]> {
@@ -24,6 +25,17 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
           dbPut('products', p).catch(() => {});
         }
         return cloudProducts;
+      } else if (cloudProducts) {
+        // Cloud is connected but currently has 0 products:
+        // Check if local DB has products to auto-upload so user never loses products
+        const localProds = await dbGetAll<Product>('products');
+        if (localProds && localProds.length > 0) {
+          for (const p of localProds) {
+            saveProductToSupabase(p).catch(() => {});
+          }
+          return localProds;
+        }
+        return [];
       }
     } catch (e) {
       console.warn('Supabase getAllProductsAdmin fallback to local db:', e);
@@ -33,23 +45,22 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
 }
 
 export async function getAllProductsCustomer(filters?: FilterState): Promise<Product[]> {
-  const products = await getAllProductsAdmin();
+  const allProducts = await getAllProductsAdmin();
 
-  let filtered = products.map((p) => sanitizeProductForCustomer(p));
+  // 1. Exclude hidden products from customer store
+  let filtered = allProducts
+    .filter((p) => !p.isHidden)
+    .map((p) => sanitizeProductForCustomer(p));
+
+  // 2. Comprehensive multi-field search and relevance ranking
+  if (filters?.searchQuery) {
+    filtered = searchProducts(filtered, filters.searchQuery);
+  }
 
   if (!filters) return filtered;
 
-  // Filter criteria
+  // 3. Faceted Filter criteria
   filtered = filtered.filter((product) => {
-    if (filters.searchQuery) {
-      const q = filters.searchQuery.toLowerCase();
-      const matchName = product.name.toLowerCase().includes(q);
-      const matchBrand = product.brand.toLowerCase().includes(q);
-      const matchCat = product.category.toLowerCase().includes(q);
-      const matchSku = product.sku.toLowerCase().includes(q);
-      if (!matchName && !matchBrand && !matchCat && !matchSku) return false;
-    }
-
     if (filters.category && product.category.toLowerCase() !== filters.category.toLowerCase()) {
       return false;
     }
@@ -67,7 +78,7 @@ export async function getAllProductsCustomer(filters?: FilterState): Promise<Pro
       return false;
     }
 
-    if (filters.inStockOnly && !product.inStock) {
+    if (filters.inStockOnly && (!product.inStock || product.stock <= 0)) {
       return false;
     }
 
@@ -83,7 +94,7 @@ export async function getAllProductsCustomer(filters?: FilterState): Promise<Pro
 
 export async function getProductBySlugCustomer(slug: string): Promise<Product | undefined> {
   const products = await getAllProductsAdmin();
-  const found = products.find((p) => p.slug === slug);
+  const found = products.find((p) => p.slug === slug && !p.isHidden);
   return found ? sanitizeProductForCustomer(found) : undefined;
 }
 
